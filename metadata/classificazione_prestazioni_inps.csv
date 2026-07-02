@@ -1,0 +1,15 @@
+prestazione_id,nome_prestazione,gruppo_inps,perimetro,tabella_finale,note
+ivs,Prestazioni IVS,IVS,previdenza,tabella_annuale_pensioni,"Invalidita, vecchiaia e superstiti secondo classificazione INPS."
+vecchiaia,Pensioni di vecchiaia,IVS,previdenza,tabella_annuale_pensioni,
+anticipata,Pensioni anticipate,IVS,previdenza,tabella_annuale_pensioni,
+invalidita_previdenziale,Pensioni di invalidita previdenziale,IVS,previdenza,tabella_annuale_pensioni,
+inabilita,Pensioni di inabilita,IVS,previdenza,tabella_annuale_pensioni,
+superstiti,Pensioni ai superstiti,IVS,previdenza,tabella_annuale_pensioni,"Include reversibilita quando la fonte usa questa classificazione."
+reversibilita,Pensioni di reversibilita,IVS,previdenza,tabella_annuale_pensioni,
+assegno_sociale,Assegno sociale,assistenza,assistenza,tabella_annuale_pensioni,
+pensione_sociale,Pensione sociale,assistenza,assistenza,tabella_annuale_pensioni,
+invalidita_civile,Invalidita civile,assistenza,assistenza,tabella_annuale_pensioni,
+accompagnamento,Indennita di accompagnamento,assistenza,assistenza,tabella_annuale_pensioni,
+fondo_casalinghe,Fondo casalinghe,gestione_specifica,previdenza,tabella_gestioni,
+pensioni_integrative,Pensioni integrative,integrazione,previdenza,tabella_annuale_pensioni,"Da tenere distinta da previdenza complementare COVIP."
+previdenza_complementare,Previdenza complementare,complementare,complementare,tabella_confronto_europeo,"Fonte principale COVIP, non INPS."
