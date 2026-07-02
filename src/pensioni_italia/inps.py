@@ -12,9 +12,12 @@ from italian_our_world_data import (
     list_inps_datasets,
 )
 
-from .io import read_optional_csv, write_frame
-from .paths import METADATA_DIR, RAW_DIR
+from .utils import read_optional_csv, write_frame
+from .utils.paths import METADATA_DIR, RAW_DIR
 
+# Search terms used when the metadata CSV is missing or incomplete.
+# The list is intentionally broad: the discovery step must over-include first,
+# then the whitelist performs the manual selection of the datasets to keep.
 DEFAULT_TERMS = (
     "pensioni",
     "pensionati",
@@ -55,16 +58,29 @@ DEFAULT_TERMS = (
 
 
 def load_inps_search_terms(path: str | Path | None = None) -> list[str]:
+    """Load the terms used to identify pension-related INPS datasets.
+
+    Parameters are explicit so the user can pass a custom CSV from a notebook or
+    from another script. When `path` is not provided, the function reads the
+    repository metadata file.
+    """
     terms_path = Path(path) if path is not None else METADATA_DIR / "inps_search_terms.csv"
     frame = read_optional_csv(terms_path)
+
+    # Fallback to the internal list when the CSV is missing, empty or malformed.
     if frame.empty or "term" not in frame:
         return list(DEFAULT_TERMS)
+
+    # The metadata file can keep extra terms disabled. This is useful when a
+    # term is too broad and creates too many false positives.
     if "include_default" in frame:
         frame = frame[frame["include_default"].fillna(0).astype(int).eq(1)]
+
     return sorted({str(term).strip() for term in frame["term"].dropna() if str(term).strip()})
 
 
 def _match_terms(text: str, terms: Iterable[str]) -> list[str]:
+    """Return all search terms found in a text field."""
     text_lower = text.lower()
     matches = []
     for term in terms:
@@ -80,7 +96,13 @@ def discover_inps_datasets(
     limit: int | None = None,
     offset: int | None = None,
 ) -> pd.DataFrame:
-    """Return INPS datasets whose identifiers or metadata match pension terms."""
+    """Discover INPS datasets that may be relevant for pensions.
+
+    The function first downloads the INPS package list. It then searches either
+    only the dataset identifier or the richer metadata fields, depending on the
+    `with_metadata` parameter. The output is a candidate list, not a final list.
+    Final selection happens in `metadata/inps_dataset_whitelist.csv`.
+    """
     search_terms = list(terms) if terms is not None else load_inps_search_terms()
     catalogue = list_inps_datasets(limit=limit, offset=offset)
     if catalogue.empty:
@@ -88,8 +110,12 @@ def discover_inps_datasets(
 
     rows: list[dict[str, object]] = []
     for dataset_id in catalogue["dataset_id"].dropna().astype(str):
-        metadata = {}
+        metadata: dict[str, object] = {}
         metadata_text = dataset_id
+
+        # Metadata calls are slower because they query one dataset at a time.
+        # They are useful for the full review because many INPS identifiers are
+        # not self-explanatory.
         if with_metadata:
             try:
                 metadata = dict(get_inps_dataset_metadata(dataset_id))
@@ -99,6 +125,7 @@ def discover_inps_datasets(
                 str(metadata.get(key, ""))
                 for key in ("id", "name", "title", "notes", "description", "metadata_error")
             )
+
         matches = _match_terms(metadata_text, search_terms)
         if matches:
             rows.append(
@@ -111,11 +138,20 @@ def discover_inps_datasets(
                     "metadata_error": metadata.get("metadata_error"),
                 }
             )
+
+    if not rows:
+        return pd.DataFrame(
+            columns=["dataset_id", "matched_terms", "title", "notes", "resources_count", "metadata_error"]
+        )
     return pd.DataFrame(rows).sort_values(["dataset_id"]).reset_index(drop=True)
 
 
 def build_inps_resource_table(dataset_ids: Iterable[str]) -> pd.DataFrame:
-    """Return one row for each downloadable resource exposed by selected INPS datasets."""
+    """Build one row for each downloadable resource in selected INPS datasets.
+
+    INPS datasets can expose several resources. This table makes the resource
+    index explicit, so the whitelist can point to the right CSV or Excel file.
+    """
     rows: list[dict[str, object]] = []
     for dataset_id in sorted({str(value).strip() for value in dataset_ids if str(value).strip()}):
         try:
@@ -123,6 +159,7 @@ def build_inps_resource_table(dataset_ids: Iterable[str]) -> pd.DataFrame:
         except Exception as exc:  # noqa: BLE001
             rows.append({"dataset_id": dataset_id, "metadata_error": str(exc)})
             continue
+
         for index, resource in enumerate(metadata.get("resources", []) or []):
             rows.append(
                 {
@@ -143,6 +180,11 @@ def build_inps_resource_table(dataset_ids: Iterable[str]) -> pd.DataFrame:
 
 
 def load_inps_whitelist(path: str | Path | None = None) -> pd.DataFrame:
+    """Load selected INPS datasets from the whitelist metadata file.
+
+    Accepted statuses are `selected`, `active` and `keep`. This lets the file
+    preserve excluded or pending rows without downloading them.
+    """
     whitelist_path = Path(path) if path is not None else METADATA_DIR / "inps_dataset_whitelist.csv"
     frame = read_optional_csv(whitelist_path)
     if frame.empty:
@@ -158,10 +200,16 @@ def fetch_whitelisted_inps_datasets(
     output_dir: str | Path | None = None,
     file_format: str = "csv",
 ) -> pd.DataFrame:
-    """Download selected INPS datasets and return a download log."""
+    """Download all INPS datasets selected in the whitelist.
+
+    The function writes raw files locally and returns a log table. Raw data are
+    not versioned by Git, because the source API should remain the reproducible
+    input.
+    """
     whitelist = load_inps_whitelist(whitelist_path)
     target_dir = Path(output_dir) if output_dir is not None else RAW_DIR / "inps"
     rows: list[dict[str, object]] = []
+
     if whitelist.empty:
         return pd.DataFrame(
             columns=["dataset_id", "resource_index", "status", "rows", "columns", "output_path", "error"]
