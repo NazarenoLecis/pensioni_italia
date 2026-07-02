@@ -1,0 +1,12 @@
+gestione_id,gestione_nome,gruppo_gestione,termini_ricerca,note
+fpld,Fondo Pensioni Lavoratori Dipendenti,dipendenti_privati,FPLD,Gestione dipendenti privati.
+dipendenti_pubblici,Gestione dipendenti pubblici,dipendenti_pubblici,ex INPDAP,Gestione dipendenti pubblici.
+gestione_separata,Gestione separata,parasubordinati,gestione separata,Parasubordinati e professionisti senza cassa.
+artigiani,Gestione artigiani,autonomi,artigiani,Autonomi artigiani.
+commercianti,Gestione commercianti,autonomi,commercianti,Autonomi commercianti.
+cdcm,Coltivatori diretti coloni e mezzadri,agricoli,coltivatori diretti,Gestione agricola autonoma.
+ex_enpals,Ex ENPALS,fondi_speciali,ENPALS,Spettacolo e sport.
+ex_inpgi,Ex INPGI,fondi_speciali,INPGI,Giornalisti.
+clero,Fondo clero,fondi_speciali,clero,Gestione specifica.
+invalidita_civile,Invalidita civile,assistenza,invalidita civile,Prestazione assistenziale.
+assegno_sociale,Assegno sociale,assistenza,assegno sociale,Prestazione assistenziale.
