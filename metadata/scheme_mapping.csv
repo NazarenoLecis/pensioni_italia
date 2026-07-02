@@ -1,0 +1,15 @@
+scheme_id,scheme_name,scheme_group,source_terms,notes
+fpld,Fondo Pensioni Lavoratori Dipendenti,private_employees,"FPLD; lavoratori dipendenti; fondo pensioni lavoratori dipendenti",Gestione principale dei lavoratori dipendenti privati.
+public_employees,Gestione dipendenti pubblici,public_employees,"dipendenti pubblici; ex INPDAP; gestione pubblica",Da trattare separatamente per continuita' storica e finanziamento.
+gestione_separata,Gestione separata,self_employed_para_subordinate,"gestione separata; collaboratori",Gestione rilevante per parasubordinati e professionisti senza cassa.
+artigiani,Gestione artigiani,self_employed,"artigiani",Autonomi artigiani.
+commercianti,Gestione commercianti,self_employed,"commercianti",Autonomi commercianti.
+cdcm,Coltivatori diretti coloni e mezzadri,agriculture,"coltivatori diretti; coloni; mezzadri; CDCM",Gestione agricola autonoma.
+ex_enpals,Ex ENPALS,sectoral_funds,"ENPALS; spettacolo; sportivi",Gestione spettacolo e sport professionistico confluita in INPS.
+ex_inpgi,Ex INPGI,sectoral_funds,"INPGI; giornalisti",Gestione giornalisti confluita o collegata a INPS secondo perimetro temporale.
+clero,Fondo clero,sectoral_funds,"clero",Gestione specifica da separare per natura e numerosita'.
+fondi_speciali,Fondi speciali,sectoral_funds,"fondi speciali; elettrici; telefonici; volo; trasporti; dazieri; minatori",Contenitore da dettagliare per fondo quando il dataset lo permette.
+invalidita_civile,Invalidita' civile,assistance,"invalidita civile; invalidi civili; accompagnamento",Prestazione assistenziale. Tenere distinta dalla previdenza.
+assegno_sociale,Assegno sociale,assistance,"assegno sociale; pensione sociale",Prestazione assistenziale finanziata dalla fiscalita' generale.
+pensioni_estero,Pensioni pagate all'estero,cross_border,"estero; pensioni estero",Dimensione territoriale specifica.
+professional_funds,Casse professionali,professional_funds,"casse professionali; enti 509; enti 103",Fuori dal perimetro INPS. Richiede fonte per singolo ente.
