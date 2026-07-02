@@ -4,20 +4,6 @@ Repository per scaricare, documentare e analizzare dati ufficiali sul sistema pe
 
 L'obiettivo e' tenere separati i diversi perimetri statistici e contabili. La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbliche, la spesa ESSPROS, le prestazioni assistenziali e la previdenza complementare misurano cose diverse. Ogni analisi deve indicare fonte, definizione, trasformazione e perimetro.
 
-## Regole
-
-- Solo funzioni.
-- Nessuna classe.
-- Nessun argparse.
-- Una sola cartella di codice: `code/`.
-- Tutto in italiano: nomi dei file, funzioni, commenti, log e documentazione.
-- Parametri modificabili come variabili all'inizio dei file o come argomenti di funzione.
-- Utilita' generiche in `code/utilita.py` e `code/grafici.py`.
-- Scaricamento complessivo in `code/scarica_tutto.py`.
-- Analisi complessiva in `code/analisi_tutto.py`.
-- Scaricamento e analisi per categoria in file separati.
-- La metodologia sta in questo README, non in file separati sotto `docs/`.
-
 ## Struttura
 
 ```text
