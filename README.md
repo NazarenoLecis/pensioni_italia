@@ -16,11 +16,10 @@ pensioni-italia/
     dati_istat.py
     dati_eurostat.py
     risorse_url.py
-    pannelli.py
-    costruisci_pannelli.py
+    tabelle_finali.py
+    costruisci_tabelle_finali.py
     scarica_tutto.py
-    analisi_pensioni.py
-    analisi_tutto.py
+    analisi.py
   metadata/
   data/
     raw/
@@ -54,19 +53,21 @@ python code/dati_eurostat.py
 python code/risorse_url.py
 ```
 
-## Pannelli finali
+## Tabelle finali
 
 ```bash
-python code/costruisci_pannelli.py
+python code/costruisci_tabelle_finali.py
 ```
+
+Le tabelle finali sono dataset puliti e coerenti, costruiti a partire dai dati grezzi scaricati dalle fonti ufficiali. Sono le tabelle usate dall'analisi, dai grafici e da eventuali dashboard.
 
 ## Analisi e grafici
 
 ```bash
-python code/analisi_tutto.py
+python code/analisi.py
 ```
 
-L'analisi legge i pannelli finali in `data/final/` e salva i grafici in `outputs/charts/`.
+L'analisi legge le tabelle finali in `data/final/` e salva i grafici in `outputs/charts/`.
 
 ## Metodologia
 
@@ -77,13 +78,13 @@ La discovery identifica dataset potenzialmente rilevanti nelle fonti ufficiali. 
 Output principale per INPS:
 
 ```text
-metadata/inps_catalogue_candidates.csv
+metadata/candidati_catalogo_inps.csv
 ```
 
 La discovery usa i termini in:
 
 ```text
-metadata/inps_search_terms.csv
+metadata/termini_ricerca_inps.csv
 ```
 
 ### 2. Whitelist
@@ -91,14 +92,14 @@ metadata/inps_search_terms.csv
 I dataset verificati vengono inseriti nelle whitelist in `metadata/`. Esempi:
 
 ```text
-metadata/inps_dataset_whitelist.csv
-metadata/openbdap_dataset_whitelist.csv
-metadata/istat_dataset_whitelist.csv
-metadata/eurostat_whitelist.csv
-metadata/url_resources.csv
+metadata/whitelist_inps.csv
+metadata/whitelist_openbdap.csv
+metadata/whitelist_istat.csv
+metadata/whitelist_eurostat.csv
+metadata/risorse_url.csv
 ```
 
-Le whitelist decidono cosa scaricare. Lo stato `selected`, `active` o `keep` abilita il download. I dataset non verificati restano fuori dal flusso.
+Le whitelist decidono cosa scaricare. I dataset non verificati restano fuori dal flusso.
 
 ### 3. Download
 
@@ -108,18 +109,18 @@ I dati grezzi vengono salvati in `data/raw/`. Questa cartella e' ignorata da Git
 
 Le trasformazioni intermedie vanno in `data/processed/`. Questa cartella e' ignorata da Git. Serve per lavorare localmente senza versionare file pesanti o instabili.
 
-### 5. Pannelli finali
+### 5. Tabelle finali
 
 I dataset finali, piccoli e documentati, possono essere salvati in `data/final/`. Prima di versionarli bisogna avere fonte, data di estrazione, definizione e dizionario dati.
 
-Pannelli previsti:
+Tabelle finali previste:
 
 ```text
-data/final/annual_pensions_panel.csv
-data/final/schemes_panel.csv
-data/final/territorial_panel.csv
-data/final/pension_flows_panel.csv
-data/final/eu_comparison_panel.csv
+data/final/tabella_annuale_pensioni.csv
+data/final/tabella_gestioni.csv
+data/final/tabella_territoriale.csv
+data/final/tabella_flussi_pensionamento.csv
+data/final/tabella_confronto_europeo.csv
 ```
 
 ## Definizioni operative
@@ -140,12 +141,21 @@ La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbli
 
 Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono dati fiscali o simulazioni IRPEF. Il passaggio dal lordo al netto va documentato.
 
+## Cosa manca
+
+- Popolare le whitelist con dataset effettivamente verificati.
+- Costruire funzioni di pulizia dalle fonti grezze alle tabelle finali.
+- Aggiungere controlli di qualita': colonne attese, duplicati, anni mancanti, valori negativi anomali, coerenza tra importi e conteggi.
+- Aggiungere un dizionario dati per ogni tabella finale.
+- Salvare un registro fonti con URL, data di estrazione, fonte, licenza e note metodologiche.
+- Aggiungere grafici per demografia, gestioni, trasferimenti statali, previdenza complementare e confronto europeo.
+
 ## Flusso operativo
 
 1. Aggiornare le whitelist in `metadata/`.
 2. Eseguire `python code/scarica_tutto.py`.
-3. Costruire o aggiornare i pannelli finali.
-4. Eseguire `python code/analisi_tutto.py`.
+3. Costruire o aggiornare le tabelle finali.
+4. Eseguire `python code/analisi.py`.
 5. Controllare i log in `data/processed/` e `data/final/`.
 
 I dati raw e processed restano locali. I grafici generati restano in `outputs/charts/` e non vengono versionati, salvo scelta esplicita.
