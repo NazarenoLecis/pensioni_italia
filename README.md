@@ -18,9 +18,20 @@ pensioni-italia/
     risorse_url.py
     tabelle_finali.py
     costruisci_tabelle_finali.py
+    trasforma_dati.py
+    controlli_qualita.py
     scarica_tutto.py
     analisi.py
+    esegui_pipeline.py
   metadata/
+    registro_fonti.csv
+    dizionario_dati.csv
+    termini_ricerca_inps.csv
+    whitelist_inps.csv
+    whitelist_openbdap.csv
+    whitelist_istat.csv
+    whitelist_eurostat.csv
+    risorse_url.csv
   data/
     raw/
     processed/
@@ -36,6 +47,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## Esecuzione completa
+
+```bash
+python code/esegui_pipeline.py
+```
+
+Questo esegue scaricamento, trasformazione verso tabelle finali, controlli di qualita' e analisi grafica.
 
 ## Scaricamento completo
 
@@ -57,9 +76,18 @@ python code/risorse_url.py
 
 ```bash
 python code/costruisci_tabelle_finali.py
+python code/trasforma_dati.py
 ```
 
 Le tabelle finali sono dataset puliti e coerenti, costruiti a partire dai dati grezzi scaricati dalle fonti ufficiali. Sono le tabelle usate dall'analisi, dai grafici e da eventuali dashboard.
+
+## Controlli qualita'
+
+```bash
+python code/controlli_qualita.py
+```
+
+I controlli verificano presenza dei dati, colonne attese, duplicati, anni validi e valori numerici.
 
 ## Analisi e grafici
 
@@ -89,7 +117,7 @@ metadata/termini_ricerca_inps.csv
 
 ### 2. Whitelist
 
-I dataset verificati vengono inseriti nelle whitelist in `metadata/`. Esempi:
+I dataset verificati vengono inseriti nelle whitelist in `metadata/`:
 
 ```text
 metadata/whitelist_inps.csv
@@ -141,21 +169,15 @@ La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbli
 
 Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono dati fiscali o simulazioni IRPEF. Il passaggio dal lordo al netto va documentato.
 
-## Cosa manca
+## Cosa resta da fare manualmente
 
-- Popolare le whitelist con dataset effettivamente verificati.
-- Costruire funzioni di pulizia dalle fonti grezze alle tabelle finali.
-- Aggiungere controlli di qualita': colonne attese, duplicati, anni mancanti, valori negativi anomali, coerenza tra importi e conteggi.
-- Aggiungere un dizionario dati per ogni tabella finale.
-- Salvare un registro fonti con URL, data di estrazione, fonte, licenza e note metodologiche.
-- Aggiungere grafici per demografia, gestioni, trasferimenti statali, previdenza complementare e confronto europeo.
+Le whitelist devono essere popolate con dataset effettivamente verificati. Questa parte richiede una scelta metodologica sui dataset da includere e sui perimetri da usare.
 
 ## Flusso operativo
 
-1. Aggiornare le whitelist in `metadata/`.
-2. Eseguire `python code/scarica_tutto.py`.
-3. Costruire o aggiornare le tabelle finali.
-4. Eseguire `python code/analisi.py`.
-5. Controllare i log in `data/processed/` e `data/final/`.
+1. Popolare le whitelist in `metadata/`.
+2. Eseguire `python code/esegui_pipeline.py`.
+3. Controllare i log in `data/processed/` e `data/final/`.
+4. Verificare i grafici in `outputs/charts/`.
 
 I dati raw e processed restano locali. I grafici generati restano in `outputs/charts/` e non vengono versionati, salvo scelta esplicita.
