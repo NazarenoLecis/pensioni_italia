@@ -1,0 +1,41 @@
+term,category,include_default
+pensioni,general,1
+pensionati,general,1
+pensione,general,1
+vecchiaia,benefit_type,1
+anzianita,benefit_type,1
+anticipata,benefit_type,1
+invalidita,benefit_type,1
+inabilita,benefit_type,1
+superstiti,benefit_type,1
+reversibilita,benefit_type,1
+assegno sociale,assistance,1
+pensioni sociali,assistance,1
+invalidi civili,assistance,1
+invalidita civile,assistance,1
+accompagnamento,assistance,1
+liquidate,flow,1
+vigenti,stock,1
+decorrenza,flow,1
+gestione,scheme,1
+fondo,scheme,1
+FPLD,scheme,1
+dipendenti pubblici,scheme,1
+gestione separata,scheme,1
+artigiani,scheme,1
+commercianti,scheme,1
+coltivatori diretti,scheme,1
+coloni,scheme,1
+mezzadri,scheme,1
+ENPALS,scheme,1
+INPGI,scheme,1
+clero,scheme,1
+fondi speciali,scheme,1
+ex fondi,scheme,1
+GIAS,accounts,1
+prestazioni istituzionali,accounts,1
+rendiconto,accounts,1
+trasferimenti,accounts,1
+contributi,contributions,1
+contribuenti,contributions,1
+aliquote contributive,contributions,1
