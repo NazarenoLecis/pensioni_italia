@@ -63,6 +63,10 @@ coverage.xml
 /data/cache/*
 !/data/cache/.gitkeep
 
+# Generated charts
+/outputs/charts/*
+!/outputs/charts/.gitkeep
+
 # Logs and temporary outputs
 logs/
 *.log
