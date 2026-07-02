@@ -1,0 +1,33 @@
+termine,categoria,includi
+pensioni,generale,1
+pensionati,generale,1
+pensione,generale,1
+vecchiaia,tipo_prestazione,1
+anzianita,tipo_prestazione,1
+anticipata,tipo_prestazione,1
+invalidita,tipo_prestazione,1
+inabilita,tipo_prestazione,1
+superstiti,tipo_prestazione,1
+reversibilita,tipo_prestazione,1
+assegno sociale,assistenza,1
+invalidita civile,assistenza,1
+accompagnamento,assistenza,1
+liquidate,flussi,1
+vigenti,stock,1
+decorrenza,flussi,1
+gestione,gestioni,1
+fondo,gestioni,1
+FPLD,gestioni,1
+dipendenti pubblici,gestioni,1
+gestione separata,gestioni,1
+artigiani,gestioni,1
+commercianti,gestioni,1
+coltivatori diretti,gestioni,1
+ENPALS,gestioni,1
+INPGI,gestioni,1
+clero,gestioni,1
+fondi speciali,gestioni,1
+ex fondi,gestioni,1
+GIAS,bilancio,1
+trasferimenti,bilancio,1
+contributi,contributi,1
