@@ -1,0 +1,13 @@
+tabella,colonna,tipo,descrizione,unita,fonte
+final/tabella_annuale_pensioni.csv,anno,intero,Anno di riferimento,,
+final/tabella_annuale_pensioni.csv,indicatore_id,testo,Identificativo indicatore,,
+final/tabella_annuale_pensioni.csv,famiglia_definizione,testo,Famiglia metodologica o contabile,,
+final/tabella_annuale_pensioni.csv,fonte_id,testo,Identificativo fonte collegato al registro fonti,,
+final/tabella_annuale_pensioni.csv,valore,numerico,Valore osservato,variabile,
+final/tabella_annuale_pensioni.csv,unita,testo,Unita di misura,,
+final/tabella_annuale_pensioni.csv,area,testo,Area geografica o perimetro,,
+final/tabella_annuale_pensioni.csv,note,testo,Note metodologiche,,
+final/tabella_gestioni.csv,gestione_id,testo,Identificativo gestione o fondo,,
+final/tabella_gestioni.csv,gestione_nome,testo,Nome gestione o fondo,,
+final/tabella_territoriale.csv,codice_territorio,testo,Codice territoriale,,
+final/tabella_territoriale.csv,nome_territorio,testo,Nome del territorio,,
