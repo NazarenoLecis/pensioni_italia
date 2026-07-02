@@ -1,6 +1,6 @@
 # pensioni-italia
 
-Repository per scaricare e documentare dati ufficiali sul sistema pensionistico italiano.
+Repository per scaricare, documentare e analizzare dati ufficiali sul sistema pensionistico italiano.
 
 ## Regole
 
@@ -9,9 +9,10 @@ Repository per scaricare e documentare dati ufficiali sul sistema pensionistico 
 - Nessun argparse.
 - Una sola cartella di codice: `code/`.
 - Parametri modificabili come variabili o argomenti di funzione.
-- Utility in `code/utils.py`.
+- Utility in `code/utils.py` e `code/chart_utils.py`.
 - Download complessivo in `code/download_all.py`.
-- Download per categoria in file separati.
+- Analisi complessiva in `code/analysis_all.py`.
+- Download e analisi per categoria in file separati.
 
 ## Struttura
 
@@ -19,14 +20,22 @@ Repository per scaricare e documentare dati ufficiali sul sistema pensionistico 
 pensioni-italia/
   code/
     utils.py
+    chart_utils.py
     inps_open_data.py
     openbdap_public_finance.py
     istat_data.py
     eurostat_data.py
     url_resources.py
     download_all.py
+    analysis_pensions.py
+    analysis_all.py
   metadata/
   data/
+    raw/
+    processed/
+    final/
+  outputs/
+    charts/
   docs/
 ```
 
@@ -53,5 +62,13 @@ python code/istat_data.py
 python code/eurostat_data.py
 python code/url_resources.py
 ```
+
+## Analisi e grafici
+
+```bash
+python code/analysis_all.py
+```
+
+Il file legge i pannelli finali in `data/final/` e salva i grafici in `outputs/charts/`.
 
 Le whitelist in `metadata/` decidono cosa scaricare. I dati raw e processed restano locali.
