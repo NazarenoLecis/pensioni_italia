@@ -27,6 +27,7 @@ pensioni-italia/
     registro_fonti.csv
     dizionario_dati.csv
     definizioni_indicatori.csv
+    classificazione_prestazioni_inps.csv
     mappatura_gestioni.csv
     termini_ricerca_inps.csv
     whitelist_inps.csv
@@ -82,6 +83,8 @@ python code/risorse_url.py
 
 La discovery identifica dataset potenzialmente rilevanti. Le whitelist in `metadata/` decidono cosa scaricare. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
 
+Le definizioni delle prestazioni seguono la classificazione ufficiale della fonte quando disponibile. Per INPS, la tabella `metadata/classificazione_prestazioni_inps.csv` separa IVS, vecchiaia, anticipate, invalidita previdenziale, superstiti, assegno sociale, invalidita civile, accompagnamento, fondo casalinghe, pensioni integrative e previdenza complementare.
+
 Tabelle finali previste:
 
 ```text
@@ -104,4 +107,4 @@ Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono 
 
 ## Cosa resta da fare manualmente
 
-Popolare le whitelist con dataset effettivamente verificati. Questa parte richiede una scelta metodologica sui dataset da includere e sui perimetri da usare.
+Popolare le whitelist con dataset effettivamente verificati. Questa parte richiede scegliere quali dataset ufficiali usare per ciascuna tabella finale.
