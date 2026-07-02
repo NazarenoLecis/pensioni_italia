@@ -26,6 +26,8 @@ pensioni-italia/
     istat_data.py
     eurostat_data.py
     url_resources.py
+    panels.py
+    build_panels.py
     download_all.py
     analysis_pensions.py
     analysis_all.py
@@ -63,12 +65,18 @@ python code/eurostat_data.py
 python code/url_resources.py
 ```
 
+## Pannelli finali
+
+```bash
+python code/build_panels.py
+```
+
 ## Analisi e grafici
 
 ```bash
 python code/analysis_all.py
 ```
 
-Il file legge i pannelli finali in `data/final/` e salva i grafici in `outputs/charts/`.
+L'analisi legge i pannelli finali in `data/final/` e salva i grafici in `outputs/charts/`.
 
 Le whitelist in `metadata/` decidono cosa scaricare. I dati raw e processed restano locali.
