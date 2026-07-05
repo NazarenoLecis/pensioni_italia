@@ -18,3 +18,8 @@ pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,num
 spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
+popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
+occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
+tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo salvo diversa indicazione.
+produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
+salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.
