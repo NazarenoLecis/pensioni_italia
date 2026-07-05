@@ -1,6 +1,7 @@
 indicatore_id,famiglia_definizione,nome,unita,note
 spesa_pensionistica_inps,contabilita_inps,Spesa pensionistica INPS,euro,Perimetro contabile INPS.
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
+entrate_contributive_inps,contributi,Entrate contributive INPS,euro,Entrate contributive complessive o per gestione.
 pensioni_vigenti,stock_amministrativo,Pensioni vigenti,numero,Trattamenti pensionistici vigenti.
 pensionati,persone,Pensionati,numero,Persone beneficiarie.
 pensioni_liquidate,flussi,Pensioni liquidate,numero,Nuovi trattamenti liquidati.
@@ -8,3 +9,8 @@ contributi,contributi,Entrate contributive,euro,Entrate contributive per gestion
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
 pensionati_su_occupati,derivato,Pensionati su occupati,rapporto,Indicatore demografico-lavoristico.
+spesa_ivs,contabilita_inps,Spesa prestazioni IVS,euro,Invalidita vecchiaia superstiti secondo fonte INPS.
+spesa_assistenziale,contabilita_inps,Spesa prestazioni assistenziali,euro,Perimetro da dichiarare in base alla fonte.
+spesa_gias,contabilita_inps,Spesa GIAS,euro,Gestione interventi assistenziali e previdenziali.
+trasferimenti_gias,finanza_pubblica,Trasferimenti GIAS,euro,Trasferimenti pubblici destinati a GIAS.
+trattamenti_per_pensionato,derivato,Trattamenti per pensionato,rapporto,Numero di pensioni diviso numero di pensionati.
