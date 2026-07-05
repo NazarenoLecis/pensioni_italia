@@ -1,0 +1,6 @@
+domanda_id,tema,domanda,tabella_finale,indicatore_richiesto,fonte_principale,note
+D001,metodo,"Il sistema italiano e' a ripartizione o a capitalizzazione?",metodologico,metodologico,"INPS; RGS",Domanda concettuale da documentare nel README metodologico.
+D002,metodo,"Il metodo contributivo italiano implica accumulo finanziario individuale?",metodologico,metodologico,"INPS; RGS",Serve distinguere metodo di calcolo e finanziamento a ripartizione.
+D003,spesa,"Quanto vale la spesa pensionistica in rapporto al PIL?",tabella_annuale_pensioni,spesa_pensionistica_pil,"RGS; Eurostat; INPS",Specificare sempre il perimetro del numeratore.
+D004,spesa,"Quanto valgono le pensioni in euro correnti?",tabella_annuale_pensioni,spesa_pensionistica_inps,"INPS; RGS",Separare INPS da amministrazioni pubbliche ed ESSPROS.
+D005,copertura,"Quante entrate contributive finanziano INPS?",tabella_annuale_pensioni,entrate_contributive_inps,INPS,Da confrontare con prestazioni e trasferimenti.
