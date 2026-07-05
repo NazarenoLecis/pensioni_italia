@@ -1,6 +1,7 @@
 indicatore_id,famiglia_definizione,nome,unita,note
 spesa_pensionistica_inps,contabilita_inps,Spesa pensionistica INPS,euro,Perimetro contabile INPS.
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
+entrate_contributive_inps,contributi,Entrate contributive INPS,euro,Entrate contributive complessive o per gestione.
 pensioni_vigenti,stock_amministrativo,Pensioni vigenti,numero,Trattamenti pensionistici vigenti.
 pensionati,persone,Pensionati,numero,Persone beneficiarie.
 pensioni_liquidate,flussi,Pensioni liquidate,numero,Nuovi trattamenti liquidati.
@@ -8,3 +9,32 @@ contributi,contributi,Entrate contributive,euro,Entrate contributive per gestion
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
 pensionati_su_occupati,derivato,Pensionati su occupati,rapporto,Indicatore demografico-lavoristico.
+spesa_ivs,contabilita_inps,Spesa prestazioni IVS,euro,Invalidita vecchiaia superstiti secondo fonte INPS.
+spesa_assistenziale,contabilita_inps,Spesa prestazioni assistenziali,euro,Perimetro da dichiarare in base alla fonte.
+spesa_gias,contabilita_inps,Spesa GIAS,euro,Gestione interventi assistenziali e previdenziali.
+trasferimenti_gias,finanza_pubblica,Trasferimenti GIAS,euro,Trasferimenti pubblici destinati a GIAS.
+trattamenti_per_pensionato,derivato,Trattamenti per pensionato,rapporto,Numero di pensioni diviso numero di pensionati.
+pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,numero,Distribuzione per reddito pensionistico o importo secondo fonte.
+spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
+importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
+importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
+popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
+occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
+tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo salvo diversa indicazione.
+produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
+salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.
+aliquota_contributiva_ivs,parametri,Aliquota contributiva IVS,percentuale,Distinguere quota lavoratore datore e totale.
+tasso_sostituzione,parametri,Tasso di sostituzione,percentuale,Rapporto tra pensione e ultimo reddito da lavoro secondo scenario.
+eta_legale_pensione,parametri,Eta legale di pensionamento,anni,Requisito ordinario di vecchiaia.
+eta_effettiva_uscita,parametri,Eta effettiva di uscita,anni,Media osservata o stimata secondo fonte.
+perequazione_pensioni,parametri,Perequazione pensioni,percentuale o regola,Regola di indicizzazione.
+coefficiente_trasformazione,parametri,Coefficiente di trasformazione,percentuale,Coefficiente per eta del sistema contributivo.
+cuneo_fiscale_lavoro,confronto_europeo,Cuneo fiscale sul lavoro,percentuale,Indicatore comparabile su lavoratore tipo.
+aderenti_previdenza_complementare,previdenza_complementare,Aderenti previdenza complementare,numero,Distinguere iscritti e aderenti contribuenti.
+asset_fondi_pensione,previdenza_complementare,Asset fondi pensione,euro,Asset under management secondo fonte.
+asset_fondi_pensione_pil,previdenza_complementare,Asset fondi pensione su PIL,percentuale,Indicatore di confronto internazionale.
+spesa_sanita,finanza_pubblica,Spesa sanitaria pubblica,euro,Indicatore di contesto.
+spesa_istruzione,finanza_pubblica,Spesa per istruzione,euro,Indicatore di contesto.
+interessi_passivi,finanza_pubblica,Interessi passivi,euro,Indicatore di contesto.
+spesa_pubblica_totale,finanza_pubblica,Spesa pubblica totale,euro,Indicatore di contesto.
+scenario_riforma_pensioni,simulazioni,Scenario di riforma pensioni,euro o percentuale,Output di simulazioni replicabili.

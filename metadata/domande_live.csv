@@ -1,0 +1,30 @@
+domanda_id,tema,domanda,tabella_finale,indicatore_richiesto,fonte_principale,note
+D001,metodo,"Il sistema italiano e' a ripartizione o a capitalizzazione?",metodologico,metodologico,"INPS; RGS",Domanda concettuale da documentare nel README metodologico.
+D002,metodo,"Il metodo contributivo italiano implica accumulo finanziario individuale?",metodologico,metodologico,"INPS; RGS",Serve distinguere metodo di calcolo e finanziamento a ripartizione.
+D003,spesa,"Quanto vale la spesa pensionistica in rapporto al PIL?",tabella_annuale_pensioni,spesa_pensionistica_pil,"RGS; Eurostat; INPS",Specificare sempre il perimetro del numeratore.
+D004,spesa,"Quanto valgono le pensioni in euro correnti?",tabella_annuale_pensioni,spesa_pensionistica_inps,"INPS; RGS",Separare INPS da amministrazioni pubbliche ed ESSPROS.
+D005,copertura,"Quante entrate contributive finanziano INPS?",tabella_annuale_pensioni,entrate_contributive_inps,INPS,Da confrontare con prestazioni e trasferimenti.
+D006,copertura,"Quanto trasferisce la fiscalita' generale a INPS?",tabella_annuale_pensioni,trasferimenti_stato_inps,"INPS; OpenBDAP",Distinguere trasferimenti correnti e coperture specifiche.
+D007,assistenza_previdenza,"Quanto pesano IVS e prestazioni assistenziali?",tabella_annuale_pensioni,spesa_ivs;spesa_assistenziale,"INPS; RGS",Separare classificazione fonte e riclassificazione analitica.
+D008,assistenza_previdenza,"Quali voci GIAS sono connesse al sistema pensionistico?",tabella_gestioni,spesa_gias;trasferimenti_gias,INPS,Richiede mapping delle gestioni e delle finalita' di trasferimento.
+D009,pensioni_pensionati,"Quante pensioni e quanti pensionati ci sono?",tabella_annuale_pensioni,pensioni_vigenti;pensionati,INPS,Distinguere trattamenti e persone.
+D010,pensioni_pensionati,"Quanti trattamenti riceve in media ciascun pensionato?",tabella_distribuzione_pensionati,trattamenti_per_pensionato,INPS,Indicatore derivato da pensioni e pensionati.
+D011,distribuzione,"Qual e' la distribuzione dei pensionati per classe di importo?",tabella_distribuzione_pensionati,pensionati_per_classe_importo,INPS,Serve reddito pensionistico per persona quando disponibile.
+D012,distribuzione,"Qual e' la spesa per classe di importo?",tabella_distribuzione_pensionati,spesa_per_classe_importo,INPS,Utile per distinguere numerosita' e peso di bilancio.
+D013,distribuzione,"Qual e' l'importo medio della pensione per eta', sesso e territorio?",tabella_distribuzione_pensionati,importo_medio_pensione,INPS,Attenzione alla differenza tra pensione e pensionato.
+D014,demografia,"Come cambia la struttura per eta' della popolazione?",tabella_demografia_lavoro,popolazione_per_eta,"ISTAT; Eurostat",Include storici e scenari.
+D015,demografia,"Quanti occupati finanziano il sistema?",tabella_demografia_lavoro,occupati,"ISTAT; Eurostat",Da usare per rapporto pensionati occupati.
+D016,demografia,"Qual e' il rapporto tra pensionati e occupati?",tabella_demografia_lavoro,pensionati_su_occupati,"INPS; ISTAT",Indicatore derivato.
+D017,demografia,"Qual e' il tasso di fecondita' e come evolve negli scenari?",tabella_demografia_lavoro,tasso_fecondita,"ISTAT; Eurostat",Distinguere dato storico e scenario.
+D018,lavoro_cuneo,"Quanto vale l'aliquota contributiva IVS nel tempo?",tabella_parametri_sistema,aliquota_contributiva_ivs,"INPS; normativa",Separare dipendenti privati autonomi gestione separata e pubblici.
+D019,lavoro_cuneo,"Quanto vale il cuneo fiscale e contributivo sul lavoro?",tabella_confronto_europeo,cuneo_fiscale_lavoro,"OECD; MEF",Necessario per confronti internazionali.
+D020,lavoro_cuneo,"Qual e' la produttivita' del lavoro e la crescita salariale?",tabella_demografia_lavoro,produttivita_lavoro;salario_reale,"ISTAT; OECD; Eurostat",Da collegare al vincolo di sostenibilita'.
+D021,tassi_sostituzione,"Quali sono i tassi di sostituzione attuali e prospettici?",tabella_parametri_sistema,tasso_sostituzione,RGS,Documentare ipotesi di scenario.
+D022,eta_pensionamento,"Quali sono eta' legale eta' effettiva e canali di anticipo?",tabella_parametri_sistema,eta_legale_pensione;eta_effettiva_uscita,"INPS; OECD; RGS",Separare vecchiaia anticipata quote ape sociale e opzione donna.
+D023,perequazione,"Come funziona la perequazione e quali soglie usa?",tabella_parametri_sistema,perequazione_pensioni,"INPS; normativa",Serve serie storica normativa.
+D024,coefficienti,"Come sono definiti i coefficienti di trasformazione?",tabella_parametri_sistema,coefficiente_trasformazione,"INPS; RGS",Da collegare a eta' e speranza di vita.
+D025,previdenza_complementare,"Quanti lavoratori hanno previdenza complementare?",tabella_previdenza_complementare,aderenti_previdenza_complementare,COVIP,Distinguere iscritti e aderenti contribuenti.
+D026,previdenza_complementare,"Quanto valgono gli asset dei fondi pensione?",tabella_previdenza_complementare,asset_fondi_pensione,COVIP,Serie in euro e in rapporto al PIL.
+D027,previdenza_complementare,"Come si confronta l'Italia con altri paesi sugli asset pensionistici?",tabella_previdenza_complementare,asset_fondi_pensione_pil,"OECD; Eurostat; COVIP",Confronto internazionale.
+D028,contesto,"Quanto pesano pensioni sanita istruzione e interessi nel bilancio pubblico?",tabella_annuale_pensioni,spesa_sanita;spesa_istruzione;interessi_passivi;spesa_pubblica_totale,"RGS; ISTAT; Eurostat",Indicatori di contesto per costo opportunita'.
+D029,policy,"Quali risparmi producono le riforme proposte?",tabella_parametri_sistema,scenario_riforma_pensioni,"RGS; simulazioni",Richiede modello esplicito e ipotesi replicabili.

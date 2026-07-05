@@ -6,6 +6,7 @@ import pandas as pd
 
 from analisi import esegui_analisi
 from controlli_qualita import esegui_controlli_qualita
+from copertura_live import esegui_copertura_live
 from scarica_tutto import scarica_tutto
 from trasforma_dati import costruisci_tabelle_da_fonti_grezze
 from utilita import CARTELLA_PROCESSED, prepara_cartelle, salva_tabella
@@ -21,11 +22,12 @@ def aggiungi_log(righe: list[dict[str, object]], fase: str, log: pd.DataFrame | 
 
 
 def esegui_pipeline(percorso_log: str | Path = PERCORSO_LOG_PIPELINE) -> pd.DataFrame:
-    """Esegue download, trasformazione, controlli e analisi."""
+    """Esegue download, trasformazione, copertura live, controlli e analisi."""
     prepara_cartelle()
     righe: list[dict[str, object]] = []
     aggiungi_log(righe, "download", scarica_tutto())
     aggiungi_log(righe, "trasformazione", costruisci_tabelle_da_fonti_grezze())
+    aggiungi_log(righe, "copertura_live", esegui_copertura_live())
     aggiungi_log(righe, "controlli_qualita", esegui_controlli_qualita())
     aggiungi_log(righe, "analisi", esegui_analisi())
     log = pd.DataFrame(righe)
