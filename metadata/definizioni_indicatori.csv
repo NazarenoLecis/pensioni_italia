@@ -14,3 +14,7 @@ spesa_assistenziale,contabilita_inps,Spesa prestazioni assistenziali,euro,Perime
 spesa_gias,contabilita_inps,Spesa GIAS,euro,Gestione interventi assistenziali e previdenziali.
 trasferimenti_gias,finanza_pubblica,Trasferimenti GIAS,euro,Trasferimenti pubblici destinati a GIAS.
 trattamenti_per_pensionato,derivato,Trattamenti per pensionato,rapporto,Numero di pensioni diviso numero di pensionati.
+pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,numero,Distribuzione per reddito pensionistico o importo secondo fonte.
+spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
+importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
+importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
