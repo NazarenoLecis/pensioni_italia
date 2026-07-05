@@ -23,3 +23,9 @@ occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
 tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo salvo diversa indicazione.
 produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
 salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.
+aliquota_contributiva_ivs,parametri,Aliquota contributiva IVS,percentuale,Distinguere quota lavoratore datore e totale.
+tasso_sostituzione,parametri,Tasso di sostituzione,percentuale,Rapporto tra pensione e ultimo reddito da lavoro secondo scenario.
+eta_legale_pensione,parametri,Eta legale di pensionamento,anni,Requisito ordinario di vecchiaia.
+eta_effettiva_uscita,parametri,Eta effettiva di uscita,anni,Media osservata o stimata secondo fonte.
+perequazione_pensioni,parametri,Perequazione pensioni,percentuale o regola,Regola di indicizzazione.
+coefficiente_trasformazione,parametri,Coefficiente di trasformazione,percentuale,Coefficiente per eta del sistema contributivo.
