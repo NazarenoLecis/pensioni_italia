@@ -29,3 +29,12 @@ eta_legale_pensione,parametri,Eta legale di pensionamento,anni,Requisito ordinar
 eta_effettiva_uscita,parametri,Eta effettiva di uscita,anni,Media osservata o stimata secondo fonte.
 perequazione_pensioni,parametri,Perequazione pensioni,percentuale o regola,Regola di indicizzazione.
 coefficiente_trasformazione,parametri,Coefficiente di trasformazione,percentuale,Coefficiente per eta del sistema contributivo.
+cuneo_fiscale_lavoro,confronto_europeo,Cuneo fiscale sul lavoro,percentuale,Indicatore comparabile su lavoratore tipo.
+aderenti_previdenza_complementare,previdenza_complementare,Aderenti previdenza complementare,numero,Distinguere iscritti e aderenti contribuenti.
+asset_fondi_pensione,previdenza_complementare,Asset fondi pensione,euro,Asset under management secondo fonte.
+asset_fondi_pensione_pil,previdenza_complementare,Asset fondi pensione su PIL,percentuale,Indicatore di confronto internazionale.
+spesa_sanita,finanza_pubblica,Spesa sanitaria pubblica,euro,Indicatore di contesto.
+spesa_istruzione,finanza_pubblica,Spesa per istruzione,euro,Indicatore di contesto.
+interessi_passivi,finanza_pubblica,Interessi passivi,euro,Indicatore di contesto.
+spesa_pubblica_totale,finanza_pubblica,Spesa pubblica totale,euro,Indicatore di contesto.
+scenario_riforma_pensioni,simulazioni,Scenario di riforma pensioni,euro o percentuale,Output di simulazioni replicabili.
