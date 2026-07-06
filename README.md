@@ -4,7 +4,9 @@ Repository per scaricare, documentare e analizzare dati ufficiali sul sistema pe
 
 L'obiettivo e' tenere separati i diversi perimetri statistici e contabili. La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbliche, la spesa ESSPROS, le prestazioni assistenziali e la previdenza complementare misurano cose diverse. Ogni analisi deve indicare fonte, definizione, trasformazione e perimetro.
 
-Il repository ora include una matrice di copertura per le domande emerse nelle live sulle pensioni. La tabella `metadata/domande_live.csv` collega ogni domanda a tema, indicatore, fonte principale e tabella finale attesa. Lo script `code/copertura_live.py` genera `data/final/tabella_copertura_live.csv` e segnala quali domande hanno dati disponibili e quali restano da popolare.
+Il repository include una matrice di copertura per le domande emerse nelle live sulle pensioni. La tabella `metadata/domande_live.csv` collega ogni domanda a tema, indicatore, fonte principale e tabella finale attesa. Lo script `code/copertura_live.py` genera `data/final/tabella_copertura_live.csv` e segnala quali domande hanno dati disponibili e quali restano da popolare.
+
+Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici da usare: INPS, bilanci INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP, MEF finanze, OECD e Normattiva. Le whitelist operative servono solo a collegare questi dataset logici agli ID tecnici o agli URL specifici quando si esegue il download automatico.
 
 ## Struttura
 
@@ -28,6 +30,7 @@ pensioni-italia/
     esegui_pipeline.py
   metadata/
     registro_fonti.csv
+    dataset_attesi.csv
     dizionario_dati.csv
     definizioni_indicatori.csv
     classificazione_prestazioni_inps.csv
@@ -76,7 +79,7 @@ python code/analisi.py
 
 ## Metodologia
 
-La discovery identifica dataset potenzialmente rilevanti. Le whitelist in `metadata/` decidono cosa scaricare. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
+La discovery identifica dataset potenzialmente rilevanti. Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici necessari per rispondere alle domande. Le whitelist in `metadata/` collegano questi dataset logici agli ID tecnici o agli URL specifici della fonte. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
 
 Le definizioni delle prestazioni seguono la classificazione ufficiale della fonte quando disponibile. Per INPS, la tabella `metadata/classificazione_prestazioni_inps.csv` separa IVS, vecchiaia, anticipate, invalidita previdenziale, superstiti, assegno sociale, invalidita civile, accompagnamento, fondo casalinghe, pensioni integrative e previdenza complementare.
 
@@ -107,10 +110,10 @@ Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono 
 
 ## Stato attuale
 
-Il repository definisce domande, indicatori, fonti attese, schemi finali e controlli. Non contiene ancora dataset verificati nelle whitelist. Le tabelle finali vengono inizializzate con schema stabile e restano vuote finche' non vengono selezionate le fonti ufficiali.
+Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali e controlli. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
 
-## Cosa resta da fare manualmente
+## Cosa resta da fare
 
-Popolare le whitelist con dataset effettivamente verificati. Questa parte richiede scegliere quali dataset ufficiali usare per ciascuna tabella finale.
+Collegare ogni riga di `metadata/dataset_attesi.csv` agli ID tecnici effettivi nelle whitelist operative quando si vuole attivare il download automatico.
 
-Completare le trasformazioni specifiche da `data/raw/` verso `data/final/` per INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP e MEF finanze.
+Completare le trasformazioni specifiche da `data/raw/` verso `data/final/` per INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP, MEF finanze, OECD e Normattiva.
