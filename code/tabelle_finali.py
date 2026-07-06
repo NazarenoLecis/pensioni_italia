@@ -25,6 +25,21 @@ COLONNE_TABELLA_GESTIONI = [
     "note",
 ]
 
+COLONNE_TABELLA_TRASFERIMENTI_INPS = [
+    "anno",
+    "fonte_id",
+    "perimetro",
+    "voce_id",
+    "voce_nome",
+    "categoria_analitica",
+    "finalita",
+    "gestione_id",
+    "indicatore_id",
+    "valore",
+    "unita",
+    "note",
+]
+
 COLONNE_TABELLA_TERRITORIALE = [
     "anno",
     "livello_territoriale",
@@ -64,7 +79,10 @@ COLONNE_TABELLA_EUROPA = [
 COLONNE_TABELLA_DISTRIBUZIONE = [
     "anno",
     "popolazione",
+    "misura_distribuzione",
     "classe_importo",
+    "classe_importo_min",
+    "classe_importo_max",
     "classe_eta",
     "sesso",
     "territorio",
@@ -123,6 +141,7 @@ COLONNE_TABELLA_COPERTURA_LIVE = [
 SCHEMI_TABELLE_FINALI = {
     "tabella_annuale_pensioni": COLONNE_TABELLA_ANNUALE,
     "tabella_gestioni": COLONNE_TABELLA_GESTIONI,
+    "tabella_trasferimenti_inps": COLONNE_TABELLA_TRASFERIMENTI_INPS,
     "tabella_territoriale": COLONNE_TABELLA_TERRITORIALE,
     "tabella_flussi_pensionamento": COLONNE_TABELLA_FLUSSI,
     "tabella_confronto_europeo": COLONNE_TABELLA_EUROPA,
