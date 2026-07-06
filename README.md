@@ -8,12 +8,16 @@ Il repository include una matrice di copertura per le domande emerse nelle live 
 
 Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici da usare: INPS, bilanci INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP, MEF finanze, OECD e Normattiva. Le whitelist operative servono solo a collegare questi dataset logici agli ID tecnici o agli URL specifici quando si esegue il download automatico.
 
+Il repository include anche un calcolatore didattico per rispondere alla domanda: mi sono veramente pagato la pensione? Il calcolatore confronta il tasso di sostituzione teorico sostenibile con i contributi simulati e il tasso di sostituzione effettivo o ipotizzato.
+
 ## Struttura
 
 ```text
 pensioni-italia/
   code/
+    calcolatore_pensione_pagata.py
   metadata/
+    scenari_calcolatore_pensione_pagata.csv
     classificazione_trasferimenti_inps.csv
   notebooks/
     01_overview.ipynb
@@ -21,6 +25,7 @@ pensioni-italia/
     03_pensioni_demografia_lavoro.ipynb
     04_previdenza_complementare_confronti.ipynb
     05_trasferimenti_e_distribuzioni.ipynb
+    06_calcolatore_pensione_pagata.ipynb
   data/
     raw/
     processed/
@@ -43,7 +48,7 @@ pip install -r requirements.txt
 python code/esegui_pipeline.py
 ```
 
-Esegue scaricamento, trasformazione verso tabelle finali, controllo di copertura delle domande live, controlli di qualita' e analisi grafica.
+Esegue scaricamento, trasformazione verso tabelle finali, controllo di copertura delle domande live, controlli di qualita', calcolatore pensione pagata e analisi grafica.
 
 ## Esecuzione per blocco
 
@@ -53,6 +58,7 @@ python code/costruisci_tabelle_finali.py
 python code/trasforma_dati.py
 python code/copertura_live.py
 python code/controlli_qualita.py
+python code/calcolatore_pensione_pagata.py
 python code/analisi.py
 ```
 
@@ -68,7 +74,28 @@ notebooks/02_dataset_and_coverage.ipynb
 notebooks/03_pensioni_demografia_lavoro.ipynb
 notebooks/04_previdenza_complementare_confronti.ipynb
 notebooks/05_trasferimenti_e_distribuzioni.ipynb
+notebooks/06_calcolatore_pensione_pagata.ipynb
 ```
+
+## Calcolatore pensione pagata
+
+Il calcolatore e' in `code/calcolatore_pensione_pagata.py`. Lo scenario base e gli scenari alternativi sono in `metadata/scenari_calcolatore_pensione_pagata.csv`.
+
+Il calcolo procede in quattro passaggi:
+
+1. costruisce una carriera teorica con salario, aliquota contributiva e contributi annui;
+2. rivaluta il montante contributivo con un tasso di capitalizzazione figurativo;
+3. divide il montante per la speranza di vita residua al pensionamento;
+4. confronta il tasso di sostituzione teorico con il tasso effettivo o ipotizzato.
+
+Gli output principali sono:
+
+```text
+data/final/calcolatore_pensione_pagata_carriera.csv
+data/final/calcolatore_pensione_pagata_base.csv
+```
+
+La metrica `quota_pensione_non_coperta` misura la parte della pensione effettiva che eccede la pensione teorica sostenibile nel modello. La metrica non e' una stima ufficiale: dipende dalle ipotesi su carriera, aliquote, capitalizzazione, eta' di pensionamento, speranza di vita residua e tasso di sostituzione effettivo.
 
 ## Metodologia
 
@@ -108,7 +135,7 @@ Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono 
 
 ## Stato attuale
 
-Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali, notebook esplorativi e controlli. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
+Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali, notebook esplorativi, controlli e calcolatore pensione pagata. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
 
 ## Cosa resta da fare
 
