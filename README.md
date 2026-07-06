@@ -13,35 +13,12 @@ Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici da usare: I
 ```text
 pensioni-italia/
   code/
-    utilita.py
-    grafici.py
-    dati_inps.py
-    finanza_pubblica.py
-    dati_istat.py
-    dati_eurostat.py
-    risorse_url.py
-    tabelle_finali.py
-    costruisci_tabelle_finali.py
-    trasforma_dati.py
-    controlli_qualita.py
-    copertura_live.py
-    scarica_tutto.py
-    analisi.py
-    esegui_pipeline.py
   metadata/
-    registro_fonti.csv
-    dataset_attesi.csv
-    dizionario_dati.csv
-    definizioni_indicatori.csv
-    classificazione_prestazioni_inps.csv
-    mappatura_gestioni.csv
-    domande_live.csv
-    termini_ricerca_inps.csv
-    whitelist_inps.csv
-    whitelist_openbdap.csv
-    whitelist_istat.csv
-    whitelist_eurostat.csv
-    risorse_url.csv
+  notebooks/
+    01_overview.ipynb
+    02_dataset_and_coverage.ipynb
+    03_pensioni_demografia_lavoro.ipynb
+    04_previdenza_complementare_confronti.ipynb
   data/
     raw/
     processed/
@@ -77,6 +54,19 @@ python code/controlli_qualita.py
 python code/analisi.py
 ```
 
+## Notebook esplorativi
+
+I notebook sono pensati per utenti che vogliono capire il repository senza partire dagli script. Contengono spiegazioni, parametri modificabili, controlli e codice commentato. Funzionano anche quando le tabelle finali sono ancora vuote.
+
+Ordine consigliato:
+
+```text
+notebooks/01_overview.ipynb
+notebooks/02_dataset_and_coverage.ipynb
+notebooks/03_pensioni_demografia_lavoro.ipynb
+notebooks/04_previdenza_complementare_confronti.ipynb
+```
+
 ## Metodologia
 
 La discovery identifica dataset potenzialmente rilevanti. Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici necessari per rispondere alle domande. Le whitelist in `metadata/` collegano questi dataset logici agli ID tecnici o agli URL specifici della fonte. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
@@ -110,7 +100,7 @@ Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono 
 
 ## Stato attuale
 
-Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali e controlli. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
+Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali, notebook esplorativi e controlli. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
 
 ## Cosa resta da fare
 
