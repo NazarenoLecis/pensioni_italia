@@ -10,6 +10,7 @@ from utilita import CARTELLA_METADATA, leggi_csv_opzionale
 PERCORSO_DATASET_ATTESI = CARTELLA_METADATA / "dataset_attesi.csv"
 PERCORSO_FONTI = CARTELLA_METADATA / "registro_fonti.csv"
 PERCORSO_INDICATORI = CARTELLA_METADATA / "definizioni_indicatori.csv"
+PERCORSO_OUTPUT_ANALITICI = CARTELLA_METADATA / "output_analitici.csv"
 
 COLONNE_DATASET_ATTESI = [
     "dataset_logico_id",
@@ -37,8 +38,16 @@ def leggi_dataset_attesi(percorso: str | Path = PERCORSO_DATASET_ATTESI) -> pd.D
     return leggi_csv_opzionale(percorso)
 
 
+def output_analitici_registrati() -> set[str]:
+    """Restituisce gli output analitici registrati in metadata/output_analitici.csv."""
+    output = leggi_csv_opzionale(PERCORSO_OUTPUT_ANALITICI)
+    if output.empty or "output_id" not in output.columns:
+        return set()
+    return set(output["output_id"].dropna().astype(str))
+
+
 def controlla_dataset_attesi() -> list[dict[str, object]]:
-    """Controlla coerenza tra dataset attesi, fonti, indicatori e tabelle finali."""
+    """Controlla coerenza tra dataset attesi, fonti, indicatori e output."""
     dataset = leggi_dataset_attesi()
     risultati: list[dict[str, object]] = []
 
@@ -93,18 +102,19 @@ def controlla_dataset_attesi() -> list[dict[str, object]]:
         }
     )
 
-    tabelle_richieste = {
+    output_validi = set(TABELLE_FINALI) | output_analitici_registrati()
+    output_richiesti = {
         tabella
         for valore in dataset["tabelle_finali"]
         for tabella in separa_valori(valore)
     }
-    tabelle_non_registrate = sorted(tabelle_richieste - set(TABELLE_FINALI))
+    output_non_registrati = sorted(output_richiesti - output_validi)
     risultati.append(
         {
             "tabella": "dataset_attesi",
-            "controllo": "tabelle_finali_registrate",
-            "stato": "errore" if tabelle_non_registrate else "ok",
-            "dettaglio": "; ".join(tabelle_non_registrate),
+            "controllo": "output_registrati",
+            "stato": "errore" if output_non_registrati else "ok",
+            "dettaglio": "; ".join(output_non_registrati),
         }
     )
 
