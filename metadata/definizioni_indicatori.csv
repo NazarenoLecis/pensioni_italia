@@ -1,6 +1,12 @@
 indicatore_id,famiglia_definizione,nome,unita,note
 spesa_pensionistica_inps,contabilita_inps,Spesa pensionistica INPS,euro,Perimetro contabile INPS.
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
+trasferimenti_stato_inps_per_finalita,finanza_pubblica,Trasferimenti statali a INPS per finalita,euro,Scomposizione per finalita o categoria analitica.
+trasferimenti_stato_inps_per_voce,finanza_pubblica,Trasferimenti statali a INPS per voce,euro,Scomposizione per voce di bilancio o rendiconto.
+trasferimenti_stato_inps_oneri_pensionistici,finanza_pubblica,Trasferimenti per oneri pensionistici,euro,Quota trasferimenti connessa a oneri pensionistici.
+trasferimenti_stato_inps_assistenza,finanza_pubblica,Trasferimenti per assistenza,euro,Quota trasferimenti connessa a prestazioni assistenziali.
+trasferimenti_stato_inps_sgravi,finanza_pubblica,Trasferimenti per sgravi contributivi,euro,Quota trasferimenti che copre riduzioni o agevolazioni contributive.
+trasferimenti_stato_inps_famiglia_inclusione,finanza_pubblica,Trasferimenti per famiglia e inclusione,euro,Quota per assegno unico inclusione e misure assimilabili.
 entrate_contributive_inps,contributi,Entrate contributive INPS,euro,Entrate contributive complessive o per gestione.
 pensioni_vigenti,stock_amministrativo,Pensioni vigenti,numero,Trattamenti pensionistici vigenti.
 pensionati,persone,Pensionati,numero,Persone beneficiarie.
@@ -14,8 +20,14 @@ spesa_assistenziale,contabilita_inps,Spesa prestazioni assistenziali,euro,Perime
 spesa_gias,contabilita_inps,Spesa GIAS,euro,Gestione interventi assistenziali e previdenziali.
 trasferimenti_gias,finanza_pubblica,Trasferimenti GIAS,euro,Trasferimenti pubblici destinati a GIAS.
 trattamenti_per_pensionato,derivato,Trattamenti per pensionato,rapporto,Numero di pensioni diviso numero di pensionati.
+pensioni_per_classe_importo,distribuzione,Pensioni per classe di importo,numero,Distribuzione dei trattamenti per classe di importo.
 pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,numero,Distribuzione per reddito pensionistico o importo secondo fonte.
+pensionati_per_classe_reddito_pensionistico,distribuzione,Pensionati per classe di reddito pensionistico,numero,Distribuzione delle persone per reddito pensionistico complessivo.
+pensionati_per_decile_reddito,distribuzione,Pensionati per decile di reddito pensionistico,numero,Distribuzione per decili o percentili quando disponibili.
 spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
+reddito_pensionistico_totale,distribuzione,Reddito pensionistico totale,euro,Somma dei redditi pensionistici per classe o gruppo.
+reddito_pensionistico_medio,distribuzione,Reddito pensionistico medio,euro,Media del reddito pensionistico per persona.
+reddito_pensionistico_mediano,distribuzione,Reddito pensionistico mediano,euro,Mediana del reddito pensionistico per persona.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
