@@ -2,7 +2,10 @@ fonte_id,ente,nome_fonte,url,perimetro,frequenza,licenza,note
 inps_open_data,INPS,INPS Open Data,https://www.inps.it/it/it/dati-e-bilanci/open-data.html,dati amministrativi pensioni,variabile,,Catalogo principale per dataset INPS.
 inps_bilanci,INPS,Bilanci e rendiconti INPS,https://www.inps.it/it/it/dati-e-bilanci/bilanci.html,bilanci e gestioni,annuale,,Bilanci, rendiconti, gestioni e GIAS.
 openbdap,MEF-RGS,OpenBDAP,https://bdap-opendata.rgs.mef.gov.it/,bilancio pubblico,variabile,,Bilancio dello Stato e trasferimenti.
+rgs_rapporti,MEF-RGS,Rapporti RGS su pensioni e tendenze di medio-lungo periodo,https://www.rgs.mef.gov.it/,previsioni pensioni e finanza pubblica,annuale,,Scenari su spesa pensionistica tassi di sostituzione e ipotesi macro demografiche.
 istat,ISTAT,ISTAT SDMX,https://esploradati.istat.it/,demografia lavoro territorio,variabile,,Demografia e statistiche ufficiali.
 eurostat,Eurostat,Eurostat API,https://ec.europa.eu/eurostat/databrowser/,confronti europei,variabile,,ESSPROS e dati armonizzati europei.
 covip,COVIP,Statistiche COVIP,https://www.covip.it/la-covip-e-la-sua-attivita/statistiche,previdenza complementare,annuale,,Fondi pensione e previdenza complementare.
 mef_finanze,MEF,Statistiche fiscali,https://www.finanze.gov.it/it/inevidenza/Statistiche-sulle-dichiarazioni/,fisco pensionati,annuale,,Redditi da pensione e IRPEF.
+oecd,OECD,OECD Data and publications,https://www.oecd.org/,confronti internazionali,annuale o biennale,,Tax wedge Pensions at a Glance e pension fund assets.
+normattiva,Presidenza del Consiglio dei Ministri,Normattiva,https://www.normattiva.it/,normativa,variabile,,Base normativa per aliquote requisiti perequazione coefficienti e deroghe.
