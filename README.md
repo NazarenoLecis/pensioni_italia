@@ -4,36 +4,54 @@ Repository per scaricare, documentare e analizzare dati ufficiali sul sistema pe
 
 L'obiettivo e' tenere separati i diversi perimetri statistici e contabili. La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbliche, la spesa ESSPROS, le prestazioni assistenziali e la previdenza complementare misurano cose diverse. Ogni analisi deve indicare fonte, definizione, trasformazione e perimetro.
 
-Il repository include una matrice di copertura per le domande emerse nelle live sulle pensioni. La tabella `metadata/domande_live.csv` collega ogni domanda a tema, indicatore, fonte principale e tabella finale attesa. Lo script `code/copertura_live.py` genera `data/final/tabella_copertura_live.csv` e segnala quali domande hanno dati disponibili e quali restano da popolare.
-
-Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici da usare: INPS, bilanci INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP, MEF finanze, OECD e Normattiva. Le whitelist operative servono solo a collegare questi dataset logici agli ID tecnici o agli URL specifici quando si esegue il download automatico.
-
-Il repository include anche un calcolatore didattico per rispondere alla domanda: mi sono veramente pagato la pensione? Il calcolatore confronta il tasso di sostituzione teorico sostenibile con i contributi simulati e il tasso di sostituzione effettivo o ipotizzato.
+Il repository include una matrice di copertura delle domande emerse nelle live, un catalogo dei dataset logici attesi, una matrice delle analisi pensionistiche da implementare e un calcolatore didattico sulla domanda: mi sono veramente pagato la pensione?
 
 ## Struttura
 
 ```text
 pensioni-italia/
-  code/
-    calcolatore_pensione_pagata.py
-    analisi_da_implementare.py
-  metadata/
-    analisi_da_implementare.csv
-    output_analitici.csv
-    scenari_calcolatore_pensione_pagata.csv
-    classificazione_trasferimenti_inps.csv
+  README.md
+  requirements.txt
+
+  scripts/
+    config.py
+    utils.py
+    src/
+      download_pension_data.py
+      clean_pension_data.py
+      build_pension_indicators.py
+      build_live_coverage.py
+      run_quality_checks.py
+      pension_paid_calculator.py
+      make_pension_charts.py
+      run_pipeline.py
+
   notebooks/
     01_overview.ipynb
     02_dataset_and_coverage.ipynb
     03_pensioni_demografia_lavoro.ipynb
     04_previdenza_complementare_confronti.ipynb
     05_trasferimenti_e_distribuzioni.ipynb
-    06_calcolatore_pensione_pagata.ipynb
-  data/
-    raw/
-    processed/
-    final/
-  outputs/
+    06_calcolatore.ipynb
+
+  metadata/
+    registro_fonti.csv
+    dataset_attesi.csv
+    analisi_da_implementare.csv
+    output_analitici.csv
+    definizioni_indicatori.csv
+    domande_live.csv
+    classificazione_prestazioni_inps.csv
+    classificazione_trasferimenti_inps.csv
+    scenari_calcolatore_pensione_pagata.csv
+
+  output/
+    data/
+      raw/
+      clean/
+      final/
+      cache/
+      logs/
     charts/
 ```
 
@@ -45,107 +63,113 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Esecuzione completa
+## Esecuzione
+
+Pipeline completa:
 
 ```bash
-python code/esegui_pipeline.py
+python scripts/src/run_pipeline.py
 ```
 
-Esegue scaricamento, trasformazione verso tabelle finali, controllo di copertura delle domande live, controlli di qualita', calcolatore pensione pagata e analisi grafica.
-
-## Esecuzione per blocco
+Esecuzione per blocco:
 
 ```bash
-python code/scarica_tutto.py
-python code/costruisci_tabelle_finali.py
-python code/trasforma_dati.py
-python code/copertura_live.py
-python code/controlli_qualita.py
-python code/calcolatore_pensione_pagata.py
-python code/analisi.py
+python scripts/src/download_pension_data.py
+python scripts/src/clean_pension_data.py
+python scripts/src/build_pension_indicators.py
+python scripts/src/build_live_coverage.py
+python scripts/src/run_quality_checks.py
+python scripts/src/pension_paid_calculator.py
+python scripts/src/make_pension_charts.py
 ```
 
-## Notebook esplorativi
+## Dati e fonti
 
-I notebook sono pensati per utenti che vogliono capire il repository senza partire dagli script. Contengono spiegazioni, parametri modificabili, controlli e codice commentato. Funzionano anche quando le tabelle finali sono ancora vuote.
+Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o prevede dati da INPS Open Data, bilanci INPS, OpenBDAP/MEF-RGS, ISTAT, Eurostat, COVIP, MEF Finanze, OECD e Normattiva.
 
-Ordine consigliato:
+`metadata/dataset_attesi.csv` definisce i dataset logici necessari. Le whitelist operative collegano questi dataset agli ID tecnici o agli URL scaricabili quando si vuole attivare il download automatico.
+
+## Output
+
+Tutti i file generati vengono salvati in `output`.
 
 ```text
-notebooks/01_overview.ipynb
-notebooks/02_dataset_and_coverage.ipynb
-notebooks/03_pensioni_demografia_lavoro.ipynb
-notebooks/04_previdenza_complementare_confronti.ipynb
-notebooks/05_trasferimenti_e_distribuzioni.ipynb
-notebooks/06_calcolatore_pensione_pagata.ipynb
+output/data/raw      dati scaricati
+output/data/clean    dati puliti
+output/data/final    tabelle finali e output analitici
+output/data/logs     log della pipeline e controlli
+output/charts        grafici e immagini
 ```
 
-## Calcolatore pensione pagata
-
-Il calcolatore e' in `code/calcolatore_pensione_pagata.py`. Lo scenario base e gli scenari alternativi sono in `metadata/scenari_calcolatore_pensione_pagata.csv`.
-
-Il calcolo procede in quattro passaggi:
-
-1. costruisce una carriera teorica con salario, aliquota contributiva e contributi annui;
-2. rivaluta il montante contributivo con un tasso di capitalizzazione figurativo;
-3. divide il montante per la speranza di vita residua al pensionamento;
-4. confronta il tasso di sostituzione teorico con il tasso effettivo o ipotizzato.
-
-Gli output principali sono:
+Le principali tabelle finali sono:
 
 ```text
-data/final/calcolatore_pensione_pagata_carriera.csv
-data/final/calcolatore_pensione_pagata_base.csv
+tabella_annuale_pensioni.csv
+tabella_gestioni.csv
+tabella_trasferimenti_inps.csv
+tabella_territoriale.csv
+tabella_flussi_pensionamento.csv
+tabella_confronto_europeo.csv
+tabella_distribuzione_pensionati.csv
+tabella_demografia_lavoro.csv
+tabella_previdenza_complementare.csv
+tabella_parametri_sistema.csv
+tabella_copertura_live.csv
 ```
 
-La metrica `quota_pensione_non_coperta` misura la parte della pensione effettiva che eccede la pensione teorica sostenibile nel modello. La metrica non e' una stima ufficiale: dipende dalle ipotesi su carriera, aliquote, capitalizzazione, eta' di pensionamento, speranza di vita residua e tasso di sostituzione effettivo.
-
-## Controlli di coerenza
-
-`code/controlli_qualita.py` controlla anche `metadata/dataset_attesi.csv` e `metadata/analisi_da_implementare.csv`. Le analisi devono puntare a dataset logici registrati, indicatori registrati e output registrati. Gli output del calcolatore sono registrati in `metadata/output_analitici.csv` perche' non sono tabelle finali standard.
-
-## Metodologia
-
-La discovery identifica dataset potenzialmente rilevanti. Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici necessari per rispondere alle domande. Le whitelist in `metadata/` collegano questi dataset logici agli ID tecnici o agli URL specifici della fonte. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
-
-Le definizioni delle prestazioni seguono la classificazione ufficiale della fonte quando disponibile. Per INPS, la tabella `metadata/classificazione_prestazioni_inps.csv` separa IVS, vecchiaia, anticipate, invalidita previdenziale, superstiti, assegno sociale, invalidita civile, accompagnamento, fondo casalinghe, pensioni integrative e previdenza complementare.
-
-La scomposizione dei trasferimenti Stato-INPS usa `metadata/classificazione_trasferimenti_inps.csv`. Le categorie analitiche previste sono oneri pensionistici, assistenza, sgravi contributivi, famiglia e inclusione, copertura disavanzi delle gestioni e altro.
-
-Tabelle finali previste:
+Gli output del calcolatore sono:
 
 ```text
-data/final/tabella_annuale_pensioni.csv
-data/final/tabella_gestioni.csv
-data/final/tabella_trasferimenti_inps.csv
-data/final/tabella_territoriale.csv
-data/final/tabella_flussi_pensionamento.csv
-data/final/tabella_confronto_europeo.csv
-data/final/tabella_distribuzione_pensionati.csv
-data/final/tabella_demografia_lavoro.csv
-data/final/tabella_previdenza_complementare.csv
-data/final/tabella_parametri_sistema.csv
-data/final/tabella_copertura_live.csv
+calcolatore_pensione_pagata_carriera.csv
+calcolatore_pensione_pagata_base.csv
 ```
 
-## Definizioni operative
+## Notebook
+
+I notebook sono numerati e pensati per utenti non tecnici. Usano le funzioni in `scripts` e leggono/scrivono da `output`.
+
+`01_overview.ipynb` mostra struttura, fonti, dataset, analisi e output.
+
+`02_dataset_and_coverage.ipynb` controlla coerenza tra dataset, indicatori, output e domande live.
+
+`03_pensioni_demografia_lavoro.ipynb` esplora spesa pensionistica, pensioni, pensionati, occupati e demografia.
+
+`04_previdenza_complementare_confronti.ipynb` esplora previdenza complementare e confronti internazionali.
+
+`05_trasferimenti_e_distribuzioni.ipynb` esplora trasferimenti Stato-INPS e distribuzione di pensioni e pensionati.
+
+`06_calcolatore.ipynb` esegue il calcolatore didattico.
+
+## Metodo
+
+La pipeline segue questa sequenza: preparazione delle cartelle, riepilogo fonti e whitelist, pulizia dei dati disponibili, costruzione delle tabelle finali, copertura delle domande live, controlli di qualita', calcolatore e grafici.
+
+Le funzioni generali stanno in `scripts/utils.py`. Percorsi, nomi file e configurazioni stanno in `scripts/config.py`. Il codice operativo sta in `scripts/src`.
+
+## Definizioni principali
 
 `pensioni` indica trattamenti. `pensionati` indica persone. Una persona puo' ricevere piu' trattamenti.
 
-La distribuzione delle pensioni misura i trattamenti per classe di importo. La distribuzione dei pensionati misura le persone per classe di reddito pensionistico complessivo. Le due cose non vanno confuse.
+La distribuzione delle pensioni misura i trattamenti per classe di importo. La distribuzione dei pensionati misura le persone per classe di reddito pensionistico complessivo.
 
-Le prestazioni previdenziali sono legate a contribuzione e gestione assicurativa. Le prestazioni assistenziali sono finanziate dalla fiscalita' generale o da trasferimenti pubblici. Invalidita' civile e assegno sociale vanno tenuti separati dalle pensioni previdenziali.
+Le prestazioni previdenziali sono legate a contribuzione e gestione assicurativa. Le prestazioni assistenziali sono finanziate dalla fiscalita' generale o da trasferimenti pubblici.
 
-La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbliche e la spesa ESSPROS non sono la stessa misura. Ogni confronto deve indicare fonte e perimetro.
+La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbliche e la spesa ESSPROS non sono la stessa misura.
 
-Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono dati fiscali o simulazioni IRPEF.
+## Calcolatore pensione pagata
 
-## Stato attuale
+Il calcolatore in `scripts/src/pension_paid_calculator.py` costruisce una carriera teorica, calcola il montante contributivo simulato, lo divide per la speranza di vita residua e confronta il tasso di sostituzione teorico con quello effettivo o ipotizzato.
 
-Il repository definisce domande, indicatori, fonti attese, dataset logici, output analitici, schemi finali, notebook esplorativi, controlli e calcolatore pensione pagata. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
+Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. La metrica `quota_pensione_non_coperta` misura la parte della pensione effettiva che eccede la pensione teorica sostenibile nel modello. E' una simulazione didattica, non una stima ufficiale.
 
-## Cosa resta da fare
+## Limitazioni
 
-Collegare ogni riga di `metadata/dataset_attesi.csv` agli ID tecnici effettivi nelle whitelist operative quando si vuole attivare il download automatico.
+Le whitelist possono essere vuote o parziali. In quel caso la pipeline crea schemi, log e controlli, ma non produce ancora indicatori empirici completi.
 
-Completare le trasformazioni specifiche da `data/raw/` verso `data/final/` per INPS, RGS/OpenBDAP, ISTAT, Eurostat, COVIP, MEF finanze, OECD e Normattiva.
+I confronti tra fonti richiedono attenzione al perimetro. INPS, amministrazioni pubbliche ed ESSPROS non misurano la stessa cosa.
+
+Le analisi su netto, IRPEF e reddito complessivo richiedono dati fiscali o simulazioni dedicate.
+
+## Interpretazione
+
+Prima di usare un risultato bisogna controllare fonte, perimetro, anno, unita' di misura, trattamento dei valori mancanti e distinzione tra pensione e pensionato.
