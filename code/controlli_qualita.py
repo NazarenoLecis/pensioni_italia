@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from costruisci_tabelle_finali import TABELLE_FINALI
+from dataset_attesi import controlla_dataset_attesi
 from tabelle_finali import SCHEMI_TABELLE_FINALI
 from utilita import CARTELLA_PROCESSED, leggi_csv_opzionale, prepara_cartelle, salva_tabella
 
@@ -24,7 +25,7 @@ def controlla_tabella(nome_tabella: str, percorso: str | Path, colonne_attese: l
                 "tabella": nome_tabella,
                 "controllo": "presenza_dati",
                 "stato": "avviso",
-                "dettaglio": "tabella mancante o vuota",
+                "dettaglio": "tabella vuota o non ancora popolata",
             }
         ]
 
@@ -88,6 +89,7 @@ def controlla_tabella(nome_tabella: str, percorso: str | Path, colonne_attese: l
 def esegui_controlli_qualita(percorso_log: str | Path = PERCORSO_LOG_QUALITA) -> pd.DataFrame:
     prepara_cartelle()
     righe: list[dict[str, object]] = []
+    righe.extend(controlla_dataset_attesi())
     for nome_tabella, (percorso, colonne) in TABELLE_DA_CONTROLLARE.items():
         righe.extend(controlla_tabella(nome_tabella, percorso, colonne))
     log = pd.DataFrame(righe)
