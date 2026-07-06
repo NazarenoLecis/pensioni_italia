@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from analisi_da_implementare import controlla_analisi_da_implementare
 from costruisci_tabelle_finali import TABELLE_FINALI
 from dataset_attesi import controlla_dataset_attesi
 from tabelle_finali import SCHEMI_TABELLE_FINALI
@@ -90,6 +91,7 @@ def esegui_controlli_qualita(percorso_log: str | Path = PERCORSO_LOG_QUALITA) ->
     prepara_cartelle()
     righe: list[dict[str, object]] = []
     righe.extend(controlla_dataset_attesi())
+    righe.extend(controlla_analisi_da_implementare())
     for nome_tabella, (percorso, colonne) in TABELLE_DA_CONTROLLARE.items():
         righe.extend(controlla_tabella(nome_tabella, percorso, colonne))
     log = pd.DataFrame(righe)
