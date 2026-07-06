@@ -1,0 +1,7 @@
+categoria_analitica,nome_categoria,descrizione,indicatori_collegati,note
+oneri_pensionistici,Oneri pensionistici,Trasferimenti connessi direttamente a prestazioni o oneri pensionistici,"trasferimenti_stato_inps_oneri_pensionistici; trasferimenti_stato_inps_per_finalita",Da ricondurre alla voce ufficiale della fonte.
+assistenza,Assistenza,Trasferimenti per assegno sociale invalidita civile accompagnamento e prestazioni assistenziali,"trasferimenti_stato_inps_assistenza; trasferimenti_stato_inps_per_finalita",Tenere separato da IVS e previdenza pura.
+sgravi_contributivi,Sgravi contributivi,Coperture pubbliche per riduzioni o agevolazioni contributive,"trasferimenti_stato_inps_sgravi; trasferimenti_stato_inps_per_finalita",Sono contributi non versati direttamente dai beneficiari o datori.
+famiglia_inclusione,Famiglia e inclusione,Trasferimenti per assegno unico inclusione reddito di cittadinanza o misure assimilabili,"trasferimenti_stato_inps_famiglia_inclusione; trasferimenti_stato_inps_per_finalita",Da distinguere dalle pensioni in senso stretto.
+copertura_disavanzi_gestioni,Copertura disavanzi gestioni,Coperture per gestioni o fondi con squilibri specifici,"trasferimenti_gias; trasferimenti_stato_inps_per_finalita",Serve per leggere ex fondi e gestioni speciali.
+altro,Altro,Trasferimenti non classificabili nelle categorie precedenti,trasferimenti_stato_inps_per_finalita,Usare solo quando la fonte non consente classificazione piu precisa.
