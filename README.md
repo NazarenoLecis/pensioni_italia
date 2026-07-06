@@ -14,11 +14,13 @@ Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici da usare: I
 pensioni-italia/
   code/
   metadata/
+    classificazione_trasferimenti_inps.csv
   notebooks/
     01_overview.ipynb
     02_dataset_and_coverage.ipynb
     03_pensioni_demografia_lavoro.ipynb
     04_previdenza_complementare_confronti.ipynb
+    05_trasferimenti_e_distribuzioni.ipynb
   data/
     raw/
     processed/
@@ -65,6 +67,7 @@ notebooks/01_overview.ipynb
 notebooks/02_dataset_and_coverage.ipynb
 notebooks/03_pensioni_demografia_lavoro.ipynb
 notebooks/04_previdenza_complementare_confronti.ipynb
+notebooks/05_trasferimenti_e_distribuzioni.ipynb
 ```
 
 ## Metodologia
@@ -73,11 +76,14 @@ La discovery identifica dataset potenzialmente rilevanti. Il catalogo `metadata/
 
 Le definizioni delle prestazioni seguono la classificazione ufficiale della fonte quando disponibile. Per INPS, la tabella `metadata/classificazione_prestazioni_inps.csv` separa IVS, vecchiaia, anticipate, invalidita previdenziale, superstiti, assegno sociale, invalidita civile, accompagnamento, fondo casalinghe, pensioni integrative e previdenza complementare.
 
+La scomposizione dei trasferimenti Stato-INPS usa `metadata/classificazione_trasferimenti_inps.csv`. Le categorie analitiche previste sono oneri pensionistici, assistenza, sgravi contributivi, famiglia e inclusione, copertura disavanzi delle gestioni e altro.
+
 Tabelle finali previste:
 
 ```text
 data/final/tabella_annuale_pensioni.csv
 data/final/tabella_gestioni.csv
+data/final/tabella_trasferimenti_inps.csv
 data/final/tabella_territoriale.csv
 data/final/tabella_flussi_pensionamento.csv
 data/final/tabella_confronto_europeo.csv
@@ -91,6 +97,8 @@ data/final/tabella_copertura_live.csv
 ## Definizioni operative
 
 `pensioni` indica trattamenti. `pensionati` indica persone. Una persona puo' ricevere piu' trattamenti.
+
+La distribuzione delle pensioni misura i trattamenti per classe di importo. La distribuzione dei pensionati misura le persone per classe di reddito pensionistico complessivo. Le due cose non vanno confuse.
 
 Le prestazioni previdenziali sono legate a contribuzione e gestione assicurativa. Le prestazioni assistenziali sono finanziate dalla fiscalita' generale o da trasferimenti pubblici. Invalidita' civile e assegno sociale vanno tenuti separati dalle pensioni previdenziali.
 
