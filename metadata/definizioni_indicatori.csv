@@ -15,6 +15,7 @@ contributi,contributi,Entrate contributive,euro,Entrate contributive per gestion
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
 pensionati_su_occupati,derivato,Pensionati su occupati,rapporto,Indicatore demografico-lavoristico.
+indice_dipendenza_anziani,demografia,Indice di dipendenza degli anziani,rapporto o percentuale,Popolazione anziana rispetto alla popolazione in eta attiva.
 spesa_ivs,contabilita_inps,Spesa prestazioni IVS,euro,Invalidita vecchiaia superstiti secondo fonte INPS.
 spesa_assistenziale,contabilita_inps,Spesa prestazioni assistenziali,euro,Perimetro da dichiarare in base alla fonte.
 spesa_gias,contabilita_inps,Spesa GIAS,euro,Gestione interventi assistenziali e previdenziali.
@@ -28,6 +29,7 @@ spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa as
 reddito_pensionistico_totale,distribuzione,Reddito pensionistico totale,euro,Somma dei redditi pensionistici per classe o gruppo.
 reddito_pensionistico_medio,distribuzione,Reddito pensionistico medio,euro,Media del reddito pensionistico per persona.
 reddito_pensionistico_mediano,distribuzione,Reddito pensionistico mediano,euro,Mediana del reddito pensionistico per persona.
+reddito_mediano_netto_per_eta,intergenerazionale,Reddito mediano netto per eta,euro o indice,Indicatore per confronto intergenerazionale se fonte coerente disponibile.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
@@ -36,6 +38,7 @@ tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo s
 produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
 salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.
 aliquota_contributiva_ivs,parametri,Aliquota contributiva IVS,percentuale,Distinguere quota lavoratore datore e totale.
+aliquota_contributiva_totale,parametri,Aliquota contributiva totale,percentuale,Somma delle componenti contributive secondo perimetro dichiarato.
 tasso_sostituzione,parametri,Tasso di sostituzione,percentuale,Rapporto tra pensione e ultimo reddito da lavoro secondo scenario.
 eta_legale_pensione,parametri,Eta legale di pensionamento,anni,Requisito ordinario di vecchiaia.
 eta_effettiva_uscita,parametri,Eta effettiva di uscita,anni,Media osservata o stimata secondo fonte.
@@ -43,6 +46,7 @@ perequazione_pensioni,parametri,Perequazione pensioni,percentuale o regola,Regol
 coefficiente_trasformazione,parametri,Coefficiente di trasformazione,percentuale,Coefficiente per eta del sistema contributivo.
 cuneo_fiscale_lavoro,confronto_europeo,Cuneo fiscale sul lavoro,percentuale,Indicatore comparabile su lavoratore tipo.
 aderenti_previdenza_complementare,previdenza_complementare,Aderenti previdenza complementare,numero,Distinguere iscritti e aderenti contribuenti.
+tasso_adesione_previdenza_complementare,previdenza_complementare,Tasso di adesione alla previdenza complementare,percentuale,Aderenti su popolazione o lavoratori di riferimento.
 asset_fondi_pensione,previdenza_complementare,Asset fondi pensione,euro,Asset under management secondo fonte.
 asset_fondi_pensione_pil,previdenza_complementare,Asset fondi pensione su PIL,percentuale,Indicatore di confronto internazionale.
 spesa_sanita,finanza_pubblica,Spesa sanitaria pubblica,euro,Indicatore di contesto.
