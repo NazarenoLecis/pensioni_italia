@@ -40,6 +40,10 @@ salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nell
 aliquota_contributiva_ivs,parametri,Aliquota contributiva IVS,percentuale,Distinguere quota lavoratore datore e totale.
 aliquota_contributiva_totale,parametri,Aliquota contributiva totale,percentuale,Somma delle componenti contributive secondo perimetro dichiarato.
 tasso_sostituzione,parametri,Tasso di sostituzione,percentuale,Rapporto tra pensione e ultimo reddito da lavoro secondo scenario.
+tasso_sostituzione_teorico,calcolatore,Tasso di sostituzione teorico,percentuale,Tasso sostenibile con il montante contributivo simulato.
+quota_pensione_non_coperta,calcolatore,Quota della pensione non coperta,percentuale,Parte della pensione effettiva che eccede la pensione teorica del modello.
+spesa_non_coperta_stimata,calcolatore,Spesa non coperta stimata,euro,Applicazione della quota non coperta alla spesa aggregata usata nello scenario.
+quota_non_coperta_per_occupato,calcolatore,Quota non coperta per occupato,euro,Spesa non coperta stimata divisa per numero di occupati nello scenario.
 eta_legale_pensione,parametri,Eta legale di pensionamento,anni,Requisito ordinario di vecchiaia.
 eta_effettiva_uscita,parametri,Eta effettiva di uscita,anni,Media osservata o stimata secondo fonte.
 perequazione_pensioni,parametri,Perequazione pensioni,percentuale o regola,Regola di indicizzazione.
