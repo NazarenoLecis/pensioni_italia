@@ -8,6 +8,7 @@ from utilita import CARTELLA_FINAL, prepara_cartelle, salva_tabella
 TABELLE_FINALI = {
     "tabella_annuale_pensioni": CARTELLA_FINAL / "tabella_annuale_pensioni.csv",
     "tabella_gestioni": CARTELLA_FINAL / "tabella_gestioni.csv",
+    "tabella_trasferimenti_inps": CARTELLA_FINAL / "tabella_trasferimenti_inps.csv",
     "tabella_territoriale": CARTELLA_FINAL / "tabella_territoriale.csv",
     "tabella_flussi_pensionamento": CARTELLA_FINAL / "tabella_flussi_pensionamento.csv",
     "tabella_confronto_europeo": CARTELLA_FINAL / "tabella_confronto_europeo.csv",
