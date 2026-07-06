@@ -16,7 +16,10 @@ Il repository include anche un calcolatore didattico per rispondere alla domanda
 pensioni-italia/
   code/
     calcolatore_pensione_pagata.py
+    analisi_da_implementare.py
   metadata/
+    analisi_da_implementare.csv
+    output_analitici.csv
     scenari_calcolatore_pensione_pagata.csv
     classificazione_trasferimenti_inps.csv
   notebooks/
@@ -97,6 +100,10 @@ data/final/calcolatore_pensione_pagata_base.csv
 
 La metrica `quota_pensione_non_coperta` misura la parte della pensione effettiva che eccede la pensione teorica sostenibile nel modello. La metrica non e' una stima ufficiale: dipende dalle ipotesi su carriera, aliquote, capitalizzazione, eta' di pensionamento, speranza di vita residua e tasso di sostituzione effettivo.
 
+## Controlli di coerenza
+
+`code/controlli_qualita.py` controlla anche `metadata/dataset_attesi.csv` e `metadata/analisi_da_implementare.csv`. Le analisi devono puntare a dataset logici registrati, indicatori registrati e output registrati. Gli output del calcolatore sono registrati in `metadata/output_analitici.csv` perche' non sono tabelle finali standard.
+
 ## Metodologia
 
 La discovery identifica dataset potenzialmente rilevanti. Il catalogo `metadata/dataset_attesi.csv` definisce i dataset logici necessari per rispondere alle domande. Le whitelist in `metadata/` collegano questi dataset logici agli ID tecnici o agli URL specifici della fonte. I dati grezzi vengono salvati in `data/raw/`. Le trasformazioni intermedie vanno in `data/processed/`. Le tabelle finali stanno in `data/final/` e alimentano analisi, grafici e dashboard.
@@ -135,7 +142,7 @@ Le pensioni sono normalmente rilevate al lordo. Le analisi sul netto richiedono 
 
 ## Stato attuale
 
-Il repository definisce domande, indicatori, fonti attese, dataset logici, schemi finali, notebook esplorativi, controlli e calcolatore pensione pagata. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
+Il repository definisce domande, indicatori, fonti attese, dataset logici, output analitici, schemi finali, notebook esplorativi, controlli e calcolatore pensione pagata. Le whitelist operative collegano i dataset logici agli identificativi tecnici delle API o agli URL scaricabili. Le tabelle finali vengono inizializzate con schema stabile e vengono popolate dalle trasformazioni specifiche.
 
 ## Cosa resta da fare
 
