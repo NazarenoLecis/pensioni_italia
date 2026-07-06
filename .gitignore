@@ -55,17 +55,27 @@ coverage.xml
 .ipynb_checkpoints/
 .DS_Store
 
-# Local data products
-/data/raw/*
-!/data/raw/.gitkeep
-/data/processed/*
-!/data/processed/.gitkeep
-/data/cache/*
-!/data/cache/.gitkeep
+# Generated data products
+/output/data/raw/*
+!/output/data/raw/.gitkeep
+/output/data/clean/*
+!/output/data/clean/.gitkeep
+/output/data/final/*
+!/output/data/final/.gitkeep
+/output/data/cache/*
+!/output/data/cache/.gitkeep
+/output/data/logs/*
+!/output/data/logs/.gitkeep
 
 # Generated charts
+/output/charts/*
+!/output/charts/.gitkeep
+
+# Legacy generated products
+/data/raw/*
+/data/processed/*
+/data/cache/*
 /outputs/charts/*
-!/outputs/charts/.gitkeep
 
 # Logs and temporary outputs
 logs/
