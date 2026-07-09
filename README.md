@@ -43,6 +43,7 @@ pensioni-italia/
     output_analitici.csv
     definizioni_indicatori.csv
     domande_live.csv
+    temi_dashboard.csv
     classificazione_prestazioni_inps.csv
     classificazione_trasferimenti_inps.csv
     inps_bilancio_fonti.csv
@@ -98,6 +99,8 @@ python scripts/src/make_pension_charts.py
 Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o prevede dati da INPS Open Data, bilanci INPS, OpenBDAP/MEF-RGS, ISTAT, Eurostat, COVIP, MEF Finanze, OECD e Normattiva.
 
 `metadata/dataset_attesi.csv` definisce i dataset logici necessari. Le whitelist operative collegano questi dataset agli ID tecnici o agli URL scaricabili quando si vuole attivare il download automatico.
+
+`metadata/temi_dashboard.csv` sintetizza i principali temi emersi nelle trascrizioni e li collega a domande live e indicatori. Serve al repo di pubblicazione dati per costruire il payload JSON della dashboard senza dipendere dai file di trascrizione locali.
 
 `metadata/inps_bilancio_fonti.csv` censisce rendiconti generali, bilanci preventivi, flussi finanziari, Open Data, API INPS e Rapporto annuale da usare per il blocco bilancio INPS.
 

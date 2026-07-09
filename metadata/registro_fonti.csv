@@ -1,6 +1,6 @@
 fonte_id,ente,nome_fonte,url,perimetro,frequenza,licenza,note
 inps_open_data,INPS,INPS Open Data,https://www.inps.it/it/it/dati-e-bilanci/open-data.html,dati amministrativi pensioni,variabile,,Catalogo principale per dataset INPS.
-inps_bilanci,INPS,Bilanci e rendiconti INPS,https://www.inps.it/it/it/dati-e-bilanci/bilanci.html,bilanci e gestioni,annuale,,Bilanci, rendiconti, gestioni e GIAS.
+inps_bilanci,INPS,Bilanci e rendiconti INPS,https://www.inps.it/it/it/dati-e-bilanci/bilanci.html,bilanci e gestioni,annuale,,"Bilanci, rendiconti, gestioni e GIAS."
 openbdap,MEF-RGS,OpenBDAP,https://bdap-opendata.rgs.mef.gov.it/,bilancio pubblico,variabile,,Bilancio dello Stato e trasferimenti.
 rgs_rapporti,MEF-RGS,Rapporti RGS su pensioni e tendenze di medio-lungo periodo,https://www.rgs.mef.gov.it/,previsioni pensioni e finanza pubblica,annuale,,Scenari su spesa pensionistica tassi di sostituzione e ipotesi macro demografiche.
 istat,ISTAT,ISTAT SDMX,https://esploradati.istat.it/,demografia lavoro territorio,variabile,,Demografia e statistiche ufficiali.

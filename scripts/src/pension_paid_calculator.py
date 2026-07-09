@@ -28,6 +28,8 @@ DEFAULT_SCENARIO = {
     "contributi_totali": 269_000_000_000.0,
 }
 
+SCENARIO_METADATA_FIELDS = ["scenario_id", "descrizione", "note"]
+
 
 def build_contribution_career(scenario: dict[str, float | int]) -> pd.DataFrame:
     """Costruisce una carriera contributiva teorica anno per anno.
@@ -61,6 +63,14 @@ def build_contribution_career(scenario: dict[str, float | int]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def add_scenario_columns(table: pd.DataFrame, scenario: dict[str, object]) -> pd.DataFrame:
+    """Aggiunge identificativo e descrizione scenario a una tabella del calcolatore."""
+    result = table.copy()
+    for column in reversed(SCENARIO_METADATA_FIELDS):
+        result.insert(0, column, scenario.get(column, ""))
+    return result
 
 
 def calculate_paid_pension_metrics(career: pd.DataFrame, scenario: dict[str, float | int]) -> pd.DataFrame:
@@ -111,9 +121,9 @@ def calculate_paid_pension_metrics(career: pd.DataFrame, scenario: dict[str, flo
     )
 
 
-def read_scenario(scenario_id: str = "scenario_video_didattico") -> dict[str, float | int]:
+def read_scenario(scenario_id: str = "scenario_video_didattico") -> dict[str, object]:
     """Legge uno scenario dal file metadata e lo fonde con i valori di default."""
-    scenario = dict(DEFAULT_SCENARIO)
+    scenario: dict[str, object] = {"scenario_id": scenario_id, "descrizione": "", "note": "", **DEFAULT_SCENARIO}
     scenarios = read_csv_optional(SCENARI_CALCOLATORE_PATH)
     if scenarios.empty or "scenario_id" not in scenarios.columns:
         return scenario
@@ -127,15 +137,35 @@ def read_scenario(scenario_id: str = "scenario_video_didattico") -> dict[str, fl
     return scenario
 
 
-def run_pension_paid_calculator(scenario_id: str = "scenario_video_didattico") -> pd.DataFrame:
-    """Esegue il calcolatore e salva carriera e risultati in output/data/final."""
+def read_scenarios() -> list[dict[str, object]]:
+    """Legge tutti gli scenari registrati, o lo scenario default se il file manca."""
+    scenarios = read_csv_optional(SCENARI_CALCOLATORE_PATH)
+    if scenarios.empty or "scenario_id" not in scenarios.columns:
+        return [read_scenario("scenario_video_didattico")]
+    return [read_scenario(str(scenario_id)) for scenario_id in scenarios["scenario_id"].dropna()]
+
+
+def run_pension_paid_calculator(scenario_id: str | None = None) -> pd.DataFrame:
+    """Esegue il calcolatore e salva carriera e risultati in output/data/final.
+
+    Se `scenario_id` e' assente, calcola tutti gli scenari registrati in
+    metadata/scenari_calcolatore_pensione_pagata.csv.
+    """
     prepare_directories()
-    scenario = read_scenario(scenario_id)
-    career = build_contribution_career(scenario)
-    results = calculate_paid_pension_metrics(career, scenario)
-    save_table(career, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_carriera"])
-    save_table(results, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_base"])
-    return results
+    scenarios = [read_scenario(scenario_id)] if scenario_id else read_scenarios()
+    careers = []
+    results = []
+    for scenario in scenarios:
+        career = build_contribution_career(scenario)
+        careers.append(add_scenario_columns(career, scenario))
+        result = calculate_paid_pension_metrics(career, scenario)
+        results.append(add_scenario_columns(result, scenario))
+
+    career_table = pd.concat(careers, ignore_index=True) if careers else pd.DataFrame()
+    result_table = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+    save_table(career_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_carriera"])
+    save_table(result_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_base"])
+    return result_table
 
 
 if __name__ == "__main__":
