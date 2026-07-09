@@ -39,6 +39,10 @@ produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da
 salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.
 aliquota_contributiva_ivs,parametri,Aliquota contributiva IVS,percentuale,Distinguere quota lavoratore datore e totale.
 aliquota_contributiva_totale,parametri,Aliquota contributiva totale,percentuale,Somma delle componenti contributive secondo perimetro dichiarato.
+aliquota_ivs_fpld_totale_fine_anno,parametri,Aliquota IVS FPLD totale a fine anno,percentuale,Serie storica INPS delle aliquote contributive IVS in vigore nel FPLD; valore al 31 dicembre.
+aliquota_ivs_fpld_datore_lavoro_fine_anno,parametri,Aliquota IVS FPLD a carico datore a fine anno,percentuale,Quota datore di lavoro della serie storica FPLD INPS; valore al 31 dicembre.
+aliquota_ivs_fpld_lavoratore_fine_anno,parametri,Aliquota IVS FPLD a carico lavoratore a fine anno,percentuale,Quota lavoratore della serie storica FPLD INPS; valore al 31 dicembre.
+aliquota_ivs_standard_ago_corrente,parametri,Aliquota IVS standard AGO corrente,percentuale,Riferimento corrente INPS per assicurati al FPLD AGO pari al 33%.
 tasso_sostituzione,parametri,Tasso di sostituzione,percentuale,Rapporto tra pensione e ultimo reddito da lavoro secondo scenario.
 tasso_sostituzione_teorico,calcolatore,Tasso di sostituzione teorico,percentuale,Tasso sostenibile con il montante contributivo simulato.
 quota_pensione_non_coperta,calcolatore,Quota della pensione non coperta,percentuale,Parte della pensione effettiva che eccede la pensione teorica del modello.

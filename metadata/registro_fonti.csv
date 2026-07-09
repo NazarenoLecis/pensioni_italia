@@ -1,6 +1,8 @@
 fonte_id,ente,nome_fonte,url,perimetro,frequenza,licenza,note
 inps_open_data,INPS,INPS Open Data,https://www.inps.it/it/it/dati-e-bilanci/open-data.html,dati amministrativi pensioni,variabile,,Catalogo principale per dataset INPS.
 inps_bilanci,INPS,Bilanci e rendiconti INPS,https://www.inps.it/it/it/dati-e-bilanci/bilanci.html,bilanci e gestioni,annuale,,"Bilanci, rendiconti, gestioni e GIAS."
+inps_aliquote_storiche,INPS,Aliquote storiche IVS FPLD,https://servizi2.inps.it/Servizi/CircMessStd/maestro.ashx?flagOriginale=1&idAllegato=4523,aliquote contributive storiche,storica,,Allegato INPS con aliquote contributive IVS in vigore nel FPLD.
+inps_aliquote_correnti,INPS,Aliquote contributive correnti,https://www.inps.it/it/it/inps-comunica/diritti-e-obblighi-in-materia-di-sicurezza-sociale-nell-unione-e/per-le-imprese/aliquote-contributive.html,aliquote contributive correnti,variabile,,Fonte INPS per il riferimento corrente al 33% IVS AGO/FPLD.
 openbdap,MEF-RGS,OpenBDAP,https://bdap-opendata.rgs.mef.gov.it/,bilancio pubblico,variabile,,Bilancio dello Stato e trasferimenti.
 rgs_rapporti,MEF-RGS,Rapporti RGS su pensioni e tendenze di medio-lungo periodo,https://www.rgs.mef.gov.it/,previsioni pensioni e finanza pubblica,annuale,,Scenari su spesa pensionistica tassi di sostituzione e ipotesi macro demografiche.
 istat,ISTAT,ISTAT SDMX,https://esploradati.istat.it/,demografia lavoro territorio,variabile,,Demografia e statistiche ufficiali.

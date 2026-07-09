@@ -84,8 +84,11 @@ Esecuzione per blocco:
 
 ```bash
 python scripts/src/download_pension_data.py
+python scripts/src/discover_inps_opendata_catalog.py
+python scripts/src/build_dataset_inventory.py
 python scripts/src/clean_pension_data.py
 python scripts/src/build_pension_indicators.py
+python scripts/src/build_contribution_rate_history.py
 python scripts/src/build_inps_balance_and_professional_distribution.py
 python scripts/src/discover_inps_opendata_catalog.py
 python scripts/src/build_live_coverage.py
@@ -99,6 +102,8 @@ python scripts/src/make_pension_charts.py
 Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o prevede dati da INPS Open Data, bilanci INPS, OpenBDAP/MEF-RGS, ISTAT, Eurostat, COVIP, MEF Finanze, OECD e Normattiva.
 
 `metadata/dataset_attesi.csv` definisce i dataset logici necessari. Le whitelist operative collegano questi dataset agli ID tecnici o agli URL scaricabili quando si vuole attivare il download automatico.
+
+`metadata/elenco_datasets.csv` e `docs/elenco_datasets.md` inventariano i dataset INPS individuati dal catalogo Open Data, classificandoli per ambito dashboard, priorita', formati disponibili, analisi possibili e stato d'uso. Questo file serve a decidere cosa trasformare nelle tabelle finali senza confondere catalogo e dato gia' pronto.
 
 `metadata/temi_dashboard.csv` sintetizza i principali temi emersi nelle trascrizioni e li collega a domande live e indicatori. Serve al repo di pubblicazione dati per costruire il payload JSON della dashboard senza dipendere dai file di trascrizione locali.
 
@@ -159,6 +164,12 @@ Le categorie minime sono ex dipendenti privati, ex dipendenti pubblici, ex auton
 
 La documentazione metodologica e' in `docs/metodo_bilancio_inps_e_professioni.md`.
 
+## Aliquote contributive
+
+`scripts/src/build_contribution_rate_history.py` scarica l'allegato INPS "Aliquote storiche", estrae la serie FPLD e popola `tabella_parametri_sistema.csv` con aliquota totale, quota datore e quota lavoratore a fine anno.
+
+La dashboard deve distinguere il valore FPLD storico, che dal 1998 risulta 32,70%, dal riferimento corrente INPS al 33% per l'aliquota contributiva IVS standard degli assicurati al FPLD/AGO. Sono perimetri vicini ma non identici, quindi il testo pubblico deve esplicitarlo.
+
 ## Notebook
 
 I notebook sono numerati e pensati per utenti non tecnici. Usano le funzioni in `scripts` e leggono/scrivono da `output`.
@@ -177,7 +188,7 @@ I notebook sono numerati e pensati per utenti non tecnici. Usano le funzioni in 
 
 ## Metodo
 
-La pipeline segue questa sequenza: preparazione delle cartelle, riepilogo fonti e whitelist, pulizia dei dati disponibili, costruzione delle tabelle finali, costruzione del blocco INPS bilancio/professioni, copertura delle domande live, controlli di qualita', calcolatore e grafici.
+La pipeline segue questa sequenza: preparazione delle cartelle, riepilogo fonti e whitelist, inventario dataset INPS, pulizia dei dati disponibili, costruzione delle tabelle finali, serie storica aliquote contributive, costruzione del blocco INPS bilancio/professioni, copertura delle domande live, controlli di qualita', calcolatore e grafici.
 
 Le funzioni generali stanno in `scripts/utils.py`. Percorsi, nomi file e configurazioni stanno in `scripts/config.py`. Il codice operativo sta in `scripts/src`.
 

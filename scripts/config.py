@@ -24,6 +24,7 @@ OUTPUT_ANALITICI_PATH = METADATA_DIR / "output_analitici.csv"
 ANALISI_DA_IMPLEMENTARE_PATH = METADATA_DIR / "analisi_da_implementare.csv"
 DEFINIZIONI_INDICATORI_PATH = METADATA_DIR / "definizioni_indicatori.csv"
 DOMANDE_LIVE_PATH = METADATA_DIR / "domande_live.csv"
+ELENCO_DATASETS_PATH = METADATA_DIR / "elenco_datasets.csv"
 SCENARI_CALCOLATORE_PATH = METADATA_DIR / "scenari_calcolatore_pensione_pagata.csv"
 TERMINI_RICERCA_INPS_PATH = METADATA_DIR / "termini_ricerca_inps.csv"
 WHITELIST_INPS_PATH = METADATA_DIR / "whitelist_inps.csv"
@@ -66,4 +67,6 @@ LOG_PATHS = {
     "charts": LOG_DATA_DIR / "log_charts.csv",
     "inps_balance_profession": LOG_DATA_DIR / "log_inps_balance_profession.csv",
     "opendata_discovery": LOG_DATA_DIR / "log_inps_opendata_discovery.csv",
+    "dataset_inventory": LOG_DATA_DIR / "log_dataset_inventory.csv",
+    "contribution_rates": LOG_DATA_DIR / "log_contribution_rates.csv",
 }
