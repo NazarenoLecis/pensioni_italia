@@ -31,6 +31,8 @@ WHITELIST_OPENBDAP_PATH = METADATA_DIR / "whitelist_openbdap.csv"
 WHITELIST_ISTAT_PATH = METADATA_DIR / "whitelist_istat.csv"
 WHITELIST_EUROSTAT_PATH = METADATA_DIR / "whitelist_eurostat.csv"
 RISORSE_URL_PATH = METADATA_DIR / "risorse_url.csv"
+INPS_BILANCIO_FONTI_PATH = METADATA_DIR / "inps_bilancio_fonti.csv"
+MAPPING_GESTIONI_PROFESSIONI_INPS_PATH = METADATA_DIR / "mapping_gestioni_professioni_inps.csv"
 
 FINAL_TABLE_PATHS = {
     "tabella_annuale_pensioni": FINAL_DATA_DIR / "tabella_annuale_pensioni.csv",
@@ -44,6 +46,9 @@ FINAL_TABLE_PATHS = {
     "tabella_previdenza_complementare": FINAL_DATA_DIR / "tabella_previdenza_complementare.csv",
     "tabella_parametri_sistema": FINAL_DATA_DIR / "tabella_parametri_sistema.csv",
     "tabella_copertura_live": FINAL_DATA_DIR / "tabella_copertura_live.csv",
+    "inps_bilancio_voci": FINAL_DATA_DIR / "inps_bilancio_voci.csv",
+    "inps_gestioni_previdenziali": FINAL_DATA_DIR / "inps_gestioni_previdenziali.csv",
+    "pensionati_per_gestione_professione": FINAL_DATA_DIR / "pensionati_per_gestione_professione.csv",
 }
 
 ANALYTIC_OUTPUT_PATHS = {
@@ -59,4 +64,6 @@ LOG_PATHS = {
     "quality": LOG_DATA_DIR / "log_quality_checks.csv",
     "coverage": LOG_DATA_DIR / "log_live_coverage.csv",
     "charts": LOG_DATA_DIR / "log_charts.csv",
+    "inps_balance_profession": LOG_DATA_DIR / "log_inps_balance_profession.csv",
+    "opendata_discovery": LOG_DATA_DIR / "log_inps_opendata_discovery.csv",
 }
