@@ -1,0 +1,13 @@
+tabella,colonna,descrizione,obbligatoria,note
+inps_bilancio_voci,anno,Anno di competenza del bilancio o rendiconto,si,
+inps_bilancio_voci,voce_originale,Voce come riportata nella fonte INPS,si,Non sovrascrivere la voce originale durante la normalizzazione.
+inps_bilancio_voci,voce_normalizzata,Voce armonizzata per confronti temporali,si,
+inps_bilancio_voci,macro_area,Entrate contributive trasferimenti prestazioni spese funzionamento altre poste o patrimonio,si,
+inps_bilancio_voci,importo_nominale,Importo in euro correnti secondo fonte,si,Indicare unita e scala della fonte.
+inps_gestioni_previdenziali,gestione_id,Identificativo normalizzato della gestione o fondo,si,
+inps_gestioni_previdenziali,categoria_professionale,Categoria professionale ricostruita dal mapping gestione/fondo,si,Non interpretare come professione anagrafica osservata direttamente.
+inps_gestioni_previdenziali,indicatore_id,Indicatore contabile della gestione,si,"Esempi: contributi, spesa_pensionistica_inps, saldo_gestione, trasferimenti_gias."
+pensionati_per_gestione_professione,pensionati,Numero di persone pensionate,si,Evitare duplicazione tra gestioni quando la fonte lavora su teste.
+pensionati_per_gestione_professione,prestazioni,Numero di pensioni o prestazioni,no,Separare sempre prestazioni da pensionati.
+pensionati_per_gestione_professione,duplicazione_teste,Indicatore testuale sul rischio duplicazione persone,si,"Valori consigliati: nessuna, possibile, certa, non_documentata."
+pensionati_per_gestione_professione,criterio_classificazione,Criterio usato per assegnare pensionato o prestazione alla categoria,si,"Per carriere miste dichiarare gestione principale per importo, categoria multipla o altro criterio."
