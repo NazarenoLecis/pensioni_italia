@@ -9,6 +9,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
+from build_inps_balance_and_professional_distribution import build_inps_balance_and_professional_distribution
 from build_live_coverage import build_live_coverage
 from build_pension_indicators import build_pension_indicators
 from clean_pension_data import clean_available_data
@@ -31,14 +32,16 @@ def add_log_row(rows: list[dict[str, object]], step: str, result: pd.DataFrame |
 def run_pipeline(log_path: str | Path = LOG_PATHS["pipeline"]) -> pd.DataFrame:
     """Esegue l'intera pipeline modulare del repository.
 
-    Sequenza: download, pulizia, costruzione indicatori, copertura live,
-    controlli qualita', calcolatore pensione pagata e grafici.
+    Sequenza: download, pulizia, costruzione indicatori, tabelle INPS di bilancio
+    e professione, copertura live, controlli qualita', calcolatore pensione pagata
+    e grafici.
     """
     prepare_directories()
     rows: list[dict[str, object]] = []
     add_log_row(rows, "download", run_downloads())
     add_log_row(rows, "cleaning", clean_available_data())
     add_log_row(rows, "build_indicators", build_pension_indicators())
+    add_log_row(rows, "inps_balance_profession", build_inps_balance_and_professional_distribution())
     add_log_row(rows, "live_coverage", build_live_coverage())
     add_log_row(rows, "quality_checks", run_quality_checks())
     add_log_row(rows, "pension_paid_calculator", run_pension_paid_calculator())
