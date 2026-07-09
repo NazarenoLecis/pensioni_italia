@@ -58,3 +58,9 @@ spesa_istruzione,finanza_pubblica,Spesa per istruzione,euro,Indicatore di contes
 interessi_passivi,finanza_pubblica,Interessi passivi,euro,Indicatore di contesto.
 spesa_pubblica_totale,finanza_pubblica,Spesa pubblica totale,euro,Indicatore di contesto.
 scenario_riforma_pensioni,simulazioni,Scenario di riforma pensioni,euro o percentuale,Output di simulazioni replicabili.
+bilancio_inps_voce,contabilita_inps,Voce di bilancio INPS,euro,Riga elementare del bilancio o rendiconto INPS con voce originale e macro-area normalizzata.
+risultato_economico_gestione,contabilita_inps,Risultato economico della gestione previdenziale,euro,Risultato economico o saldo della gestione secondo il documento INPS.
+pensionati_per_categoria_professionale,distribuzione_professionale,Pensionati per categoria professionale di provenienza,numero,Categoria ricostruita dalla gestione o fondo; non necessariamente professione anagrafica osservata.
+prestazioni_per_categoria_professionale,distribuzione_professionale,Prestazioni per categoria professionale di provenienza,numero,Misura trattamenti. Da non sommare ai pensionati senza controllo duplicazioni.
+importo_complessivo_categoria_professionale,distribuzione_professionale,Importo complessivo per categoria professionale,euro,Spesa o reddito pensionistico complessivo per categoria ricostruita.
+importo_medio_annuo_categoria_professionale,distribuzione_professionale,Importo medio annuo per categoria professionale,euro,Media annua per pensionato o per prestazione secondo perimetro dichiarato.
