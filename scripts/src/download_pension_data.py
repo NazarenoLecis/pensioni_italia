@@ -9,12 +9,22 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
-from config import LOG_PATHS, RAW_DATA_DIR, WHITELIST_EUROSTAT_PATH, WHITELIST_INPS_PATH, WHITELIST_ISTAT_PATH, WHITELIST_OPENBDAP_PATH, RISORSE_URL_PATH
+from config import (
+    INPS_BILANCIO_FONTI_PATH,
+    LOG_PATHS,
+    MAPPING_GESTIONI_PROFESSIONI_INPS_PATH,
+    RAW_DATA_DIR,
+    RISORSE_URL_PATH,
+    WHITELIST_EUROSTAT_PATH,
+    WHITELIST_INPS_PATH,
+    WHITELIST_ISTAT_PATH,
+    WHITELIST_OPENBDAP_PATH,
+)
 from utils import prepare_directories, read_csv_optional, save_table
 
 
 def summarize_download_inputs() -> pd.DataFrame:
-    """Riepiloga le whitelist disponibili per i download automatici.
+    """Riepiloga le whitelist e i cataloghi disponibili per i download automatici.
 
     La funzione non forza lo scaricamento dei dati. Serve a rendere esplicito
     quali fonti sono gia' state collegate agli identificativi tecnici e quali
@@ -26,6 +36,8 @@ def summarize_download_inputs() -> pd.DataFrame:
         "istat": WHITELIST_ISTAT_PATH,
         "eurostat": WHITELIST_EUROSTAT_PATH,
         "risorse_url": RISORSE_URL_PATH,
+        "fonti_bilancio_inps": INPS_BILANCIO_FONTI_PATH,
+        "mapping_gestioni_professioni_inps": MAPPING_GESTIONI_PROFESSIONI_INPS_PATH,
     }
     rows = []
     for source_name, path in sources.items():
