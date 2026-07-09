@@ -24,6 +24,9 @@ FINAL_TABLE_SCHEMAS = {
     "tabella_previdenza_complementare": ["anno", "paese", "forma_pensionistica", "indicatore_id", "fonte_id", "valore", "unita", "note"],
     "tabella_parametri_sistema": ["anno", "parametro_id", "sistema", "fonte_id", "valore", "unita", "note"],
     "tabella_copertura_live": ["domanda_id", "tema", "domanda", "stato", "tabella_finale", "indicatore_richiesto", "fonte_principale", "note"],
+    "inps_bilancio_voci": ["anno", "fonte_id", "documento", "tipo_documento", "sezione", "tabella_pagina", "gestione_id", "gestione_nome", "voce_originale", "voce_normalizzata", "macro_area", "perimetro", "indicatore_id", "importo_nominale", "unita", "importo_reale", "deflatore", "note"],
+    "inps_gestioni_previdenziali": ["anno", "fonte_id", "gestione_id", "gestione_nome", "categoria_professionale", "perimetro", "indicatore_id", "valore", "unita", "documento", "tabella_pagina", "note"],
+    "pensionati_per_gestione_professione": ["anno", "fonte_id", "gestione_id", "gestione_nome", "categoria_professionale", "criterio_classificazione", "tipo_pensione", "sesso", "classe_eta", "territorio", "indicatore_id", "pensionati", "prestazioni", "importo_complessivo", "importo_medio_annuo", "importo_medio_mensile", "unita", "duplicazione_teste", "note"],
 }
 
 
