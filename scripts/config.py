@@ -69,4 +69,5 @@ LOG_PATHS = {
     "opendata_discovery": LOG_DATA_DIR / "log_inps_opendata_discovery.csv",
     "dataset_inventory": LOG_DATA_DIR / "log_dataset_inventory.csv",
     "contribution_rates": LOG_DATA_DIR / "log_contribution_rates.csv",
+    "dashboard_core": LOG_DATA_DIR / "log_dashboard_core.csv",
 }

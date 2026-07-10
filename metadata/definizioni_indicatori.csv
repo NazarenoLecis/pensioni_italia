@@ -1,5 +1,7 @@
 indicatore_id,famiglia_definizione,nome,unita,note
 spesa_pensionistica_inps,contabilita_inps,Spesa pensionistica INPS,euro,Perimetro contabile INPS.
+spesa_pensionistica_casellario,casellario_pensionati,Spesa pensionistica Casellario,euro,Importo complessivo annuo delle prestazioni pensionistiche secondo Casellario.
+spesa_pensionistica_inps_stimata,stock_amministrativo,Spesa pensionistica INPS stimata da prestazioni,euro,Stima ottenuta da numero prestazioni vigenti per importo medio mensile per 12 quando la fonte non fornisce direttamente il totale.
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
 trasferimenti_stato_inps_per_finalita,finanza_pubblica,Trasferimenti statali a INPS per finalita,euro,Scomposizione per finalita o categoria analitica.
 trasferimenti_stato_inps_per_voce,finanza_pubblica,Trasferimenti statali a INPS per voce,euro,Scomposizione per voce di bilancio o rendiconto.
@@ -27,10 +29,12 @@ pensionati_per_classe_reddito_pensionistico,distribuzione,Pensionati per classe 
 pensionati_per_decile_reddito,distribuzione,Pensionati per decile di reddito pensionistico,numero,Distribuzione per decili o percentili quando disponibili.
 spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
 reddito_pensionistico_totale,distribuzione,Reddito pensionistico totale,euro,Somma dei redditi pensionistici per classe o gruppo.
+reddito_pensionistico_medio_mensile,reddito_pensionistico,Reddito pensionistico medio mensile,euro,Media mensile del reddito pensionistico complessivo percepito dal pensionato.
 reddito_pensionistico_medio,distribuzione,Reddito pensionistico medio,euro,Media del reddito pensionistico per persona.
 reddito_pensionistico_mediano,distribuzione,Reddito pensionistico mediano,euro,Mediana del reddito pensionistico per persona.
 reddito_mediano_netto_per_eta,intergenerazionale,Reddito mediano netto per eta,euro o indice,Indicatore per confronto intergenerazionale se fonte coerente disponibile.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
+importo_medio_pensione_mensile,distribuzione,Importo medio mensile della pensione,euro,Indicatore riferito al singolo trattamento pensionistico.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
 occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
@@ -68,3 +72,14 @@ pensionati_per_categoria_professionale,distribuzione_professionale,Pensionati pe
 prestazioni_per_categoria_professionale,distribuzione_professionale,Prestazioni per categoria professionale di provenienza,numero,Misura trattamenti. Da non sommare ai pensionati senza controllo duplicazioni.
 importo_complessivo_categoria_professionale,distribuzione_professionale,Importo complessivo per categoria professionale,euro,Spesa o reddito pensionistico complessivo per categoria ricostruita.
 importo_medio_annuo_categoria_professionale,distribuzione_professionale,Importo medio annuo per categoria professionale,euro,Media annua per pensionato o per prestazione secondo perimetro dichiarato.
+gini_reddito_pensionistico,territorio,Indice di Gini del reddito pensionistico,percentuale,Disuguaglianza del reddito pensionistico lordo annuo per territorio.
+decile_reddito_pensionistico,territorio,Decile del reddito pensionistico,euro,Valori soglia dei decili del reddito pensionistico lordo annuo per territorio.
+decile_D1_reddito_pensionistico,territorio,Primo decile reddito pensionistico,euro,Soglia del primo decile del reddito pensionistico lordo annuo per territorio.
+decile_D2_reddito_pensionistico,territorio,Secondo decile reddito pensionistico,euro,Soglia del secondo decile del reddito pensionistico lordo annuo per territorio.
+decile_D3_reddito_pensionistico,territorio,Terzo decile reddito pensionistico,euro,Soglia del terzo decile del reddito pensionistico lordo annuo per territorio.
+decile_D4_reddito_pensionistico,territorio,Quarto decile reddito pensionistico,euro,Soglia del quarto decile del reddito pensionistico lordo annuo per territorio.
+decile_D5_reddito_pensionistico,territorio,Quinto decile reddito pensionistico,euro,Soglia del quinto decile del reddito pensionistico lordo annuo per territorio.
+decile_D6_reddito_pensionistico,territorio,Sesto decile reddito pensionistico,euro,Soglia del sesto decile del reddito pensionistico lordo annuo per territorio.
+decile_D7_reddito_pensionistico,territorio,Settimo decile reddito pensionistico,euro,Soglia del settimo decile del reddito pensionistico lordo annuo per territorio.
+decile_D8_reddito_pensionistico,territorio,Ottavo decile reddito pensionistico,euro,Soglia dell'ottavo decile del reddito pensionistico lordo annuo per territorio.
+decile_D9_reddito_pensionistico,territorio,Nono decile reddito pensionistico,euro,Soglia del nono decile del reddito pensionistico lordo annuo per territorio.

@@ -22,7 +22,15 @@ def read_csv_optional(path: str | Path) -> pd.DataFrame:
     path = Path(path)
     if not path.exists() or path.stat().st_size == 0:
         return pd.DataFrame()
-    return pd.read_csv(path)
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            with path.open("r", encoding=encoding) as handle:
+                first_line = handle.readline()
+            separator = ";" if first_line.count(";") > first_line.count(",") else ","
+            return pd.read_csv(path, encoding=encoding, sep=separator)
+        except (UnicodeDecodeError, pd.errors.ParserError):
+            continue
+    return pd.read_csv(path, encoding="utf-8", encoding_errors="replace", sep=None, engine="python")
 
 
 def save_table(table: pd.DataFrame, path: str | Path, index: bool = False) -> Path:

@@ -11,6 +11,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from build_inps_balance_and_professional_distribution import build_inps_balance_and_professional_distribution
 from build_contribution_rate_history import build_contribution_rate_history
+from build_dashboard_core_data import build_dashboard_core_data
 from build_dataset_inventory import run_dataset_inventory
 from build_live_coverage import build_live_coverage
 from build_pension_indicators import build_pension_indicators
@@ -46,6 +47,7 @@ def run_pipeline(log_path: str | Path = LOG_PATHS["pipeline"]) -> pd.DataFrame:
     add_log_row(rows, "build_indicators", build_pension_indicators())
     add_log_row(rows, "contribution_rate_history", build_contribution_rate_history())
     add_log_row(rows, "inps_balance_profession", build_inps_balance_and_professional_distribution())
+    add_log_row(rows, "dashboard_core", build_dashboard_core_data())
     add_log_row(rows, "live_coverage", build_live_coverage())
     add_log_row(rows, "quality_checks", run_quality_checks())
     add_log_row(rows, "pension_paid_calculator", run_pension_paid_calculator())
