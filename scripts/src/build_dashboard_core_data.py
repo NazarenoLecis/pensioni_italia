@@ -33,7 +33,13 @@ APPENDICI_STORICHE = [
         "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiv-rapporto-annuale/3_Le_prestazioni_pensionistiche_2025.xlsx",
     },
 ]
+APPENDICI_BILANCIO = [
+    (2023, "inps_appendice_xxiii", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiii-rapporto-annuale/2_Le_principali_voci_di_bilancio_2024.xlsx"),
+    (2024, "inps_appendice_xxiv", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiv-rapporto-annuale/2_Le_principali_voci_di_bilancio_2025.xlsx"),
+    (2025, "inps_appendice_xxv", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxv-rapporto-annuale/2_Le_principali_voci_di_bilancio_2026.xlsx"),
+]
 CASELLARIO_2024_PDF_URL = "https://servizi2.inps.it/servizi/osservatoristatistici/api/getAllegato/?idAllegato=1007"
+INPS_OBSERVATORY_API = "https://servizi2.inps.it/servizi/osservatoristatistici/api"
 
 EUROSTAT_PENSION_GDP_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/spr_exp_pens"
@@ -129,6 +135,22 @@ def request_bytes(url: str, path: Path) -> bytes:
 def request_json(url: str, path: Path) -> dict[str, object]:
     data = request_bytes(url, path)
     return json.loads(data.decode("utf-8-sig"))
+
+
+def post_inps_observatory(endpoint: str, payload: dict[str, object]) -> dict[str, object]:
+    # L'endpoint rifiuta i JSON serializzati con spazi: usa lo stesso formato compatto del client ufficiale.
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    response = requests.post(
+        f"{INPS_OBSERVATORY_API}/{endpoint}/",
+        data=body,
+        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+        timeout=90,
+    )
+    response.raise_for_status()
+    result = response.json()
+    if result.get("error") or result.get("messageType") == "Anonimizzazione":
+        raise ValueError(str(result.get("error") or result.get("message")))
+    return result
 
 
 def jsonstat_geo_time(payload: dict[str, object]) -> dict[tuple[str, int], float]:
@@ -381,6 +403,103 @@ def build_consistent_annual_series(rows: list[dict[str, object]], log: list[dict
     log.append({"fonte": "inps_rapporti_annuali", "tabella": "tabella_annuale_pensioni", "righe": len(ANNUAL_REPORT_SERIES), "stato": "ok"})
 
 
+def build_state_transfers(
+    annual_rows: list[dict[str, object]],
+    transfer_rows: list[dict[str, object]],
+    log: list[dict[str, object]],
+) -> None:
+    values_by_year: dict[int, tuple[float, str]] = {}
+    contributions_by_year: dict[int, tuple[float, str]] = {}
+    for report_year, source_id, url in APPENDICI_BILANCIO:
+        path = RAW_DATA_DIR / "inps_appendici_bilancio" / f"principali_voci_bilancio_{report_year}.xlsx"
+        xl = pd.ExcelFile(BytesIO(request_bytes(url, path)))
+        table = pd.read_excel(xl, sheet_name="2.4", header=None)
+        years = [int_number(value) for value in table.iloc[2, 2:].tolist()]
+        for _, record in table.iterrows():
+            label = clean_label(record.iloc[1] if len(record) > 1 else "")
+            if label not in {"Trasferimenti dal bilancio dello Stato", "Entrate contributive"}:
+                continue
+            for year, value in zip(years, record.iloc[2:].tolist()):
+                parsed = number(value)
+                if year and parsed is not None:
+                    target = values_by_year if label.startswith("Trasferimenti") else contributions_by_year
+                    target[year] = (parsed * 1_000_000, source_id)
+
+    for year, (value, source_id) in sorted(values_by_year.items()):
+        transfer_rows.append(
+            {
+                "anno": year,
+                "fonte_id": source_id,
+                "perimetro": "Bilancio finanziario INPS",
+                "voce_id": "trasferimenti_bilancio_stato",
+                "voce_nome": "Trasferimenti dal bilancio dello Stato",
+                "categoria_analitica": "trasferimenti_correnti",
+                "finalita": "complesso_attivita_inps",
+                "gestione_id": "totale_inps",
+                "indicatore_id": "trasferimenti_stato_inps",
+                "valore": value,
+                "unita": "euro",
+                "note": "Trasferimenti correnti complessivi dal bilancio dello Stato; non sono tutti destinati esclusivamente alle pensioni.",
+            }
+        )
+    if 2025 in contributions_by_year:
+        value, source_id = contributions_by_year[2025]
+        add_annual(annual_rows, 2025, "entrate_contributive_inps", "contributi", source_id, value, "euro", "Italia", "Entrate contributive accertate; Rendiconto generale INPS 2025.")
+    log.append({"fonte": "inps_appendici_bilancio", "tabella": "tabella_trasferimenti_inps", "righe": len(transfer_rows), "stato": "ok"})
+
+
+def observatory_region_measure(observatory_id: str, name: str, year: int, measure_id: str, statistic: str) -> dict[str, float]:
+    request = {
+        "id_osservatorio": observatory_id,
+        "nome_osservatorio": name,
+        "language": "",
+        "totalRow": True,
+        "totalColumn": True,
+        "subtotalRow": True,
+        "subtotalColumn": True,
+        "selections": {
+            "rows": [{"id": "Regione", "label": "Regione", "order": 1, "aggregate": True, "expand": "", "hide": False}],
+            "cols": [],
+            "measures": [{"id": measure_id, "label": measure_id, "order": 0, "statistic": statistic}],
+            "filters": [{"id": "anno", "label": "Anno-", "values": [str(year)]}],
+        },
+    }
+    filtered = post_inps_observatory("getFiltriOsservatorio", request)
+    request["selections"]["filters"] = filtered["selections"]["filters"]
+    response = post_inps_observatory("getDatiOsservatorio", request)
+    result: dict[str, float] = {}
+    for item in response.get("values", []):
+        region = region_name_for_eurostat(str(item.get("value", "")))
+        if region not in REGION_NUTS2:
+            continue
+        measures = item.get("measures") or []
+        if measures:
+            parsed = number(measures[0].get("value"))
+            if parsed is not None:
+                result[region] = parsed
+    return result
+
+
+def build_current_regions_from_api(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    year = 2024
+    pensioners = observatory_region_measure("413", "Beneficiari totali", year, "_FREQ_SUM", "SUM")
+    pensions = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "_FREQ_SUM", "SUM")
+    average_annual = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "Importo medio annuo (euro)", "")
+    for region in REGION_NUTS2:
+        pensioner_count = pensioners.get(region)
+        pension_count = pensions.get(region)
+        average = average_annual.get(region)
+        if pensioner_count is not None:
+            territorial_rows.append(territorial(year, "regione", region, "pensionati", pensioner_count, "numero", "inps_osservatori_api", "Beneficiari totali per regione; API Osservatori statistici INPS, osservatorio 413."))
+        if pension_count is not None:
+            territorial_rows.append(territorial(year, "regione", region, "pensioni_vigenti", pension_count, "numero", "inps_osservatori_api", "Prestazioni pensionistiche per regione; API Osservatori statistici INPS, osservatorio 416."))
+        if average is not None:
+            territorial_rows.append(territorial(year, "regione", region, "importo_medio_pensione_mensile_regionale", average / 12, "euro", "inps_osservatori_api", "Importo lordo medio annuo della prestazione diviso per 12; API Osservatori statistici INPS, osservatorio 416."))
+        if pension_count is not None and average is not None:
+            territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_regionale", pension_count * average, "euro", "elaborazione_repo", "Numero di prestazioni per importo lordo medio annuo; dati API INPS osservatorio 416."))
+    log.append({"fonte": "inps_osservatori_api", "tabella": "tabella_territoriale", "righe": len(pensioners), "stato": "ok"})
+
+
 def append_profession_snapshot(
     xl: pd.ExcelFile,
     year: int,
@@ -475,7 +594,7 @@ def build_from_historical_appendices(
             for _, record in sheet37.iterrows():
                 values = record.tolist()
                 gestione = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
-                if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione"} or gestione.startswith("*"):
+                if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione", "Prestazioni previdenziali", "Prestazioni assistenziali"} or gestione.startswith("*"):
                     continue
                 for data_year, count_idx, avg_idx in [(2022, 2, 5), (2023, 3, 6)]:
                     count = number(values[count_idx])
@@ -536,7 +655,7 @@ def build_from_appendix(
     for _, record in sheet37.iterrows():
         values = record.tolist()
         gestione = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
-        if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione", "TOTALE"} or gestione.startswith("*"):
+        if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione", "TOTALE", "Prestazioni previdenziali", "Prestazioni assistenziali"} or gestione.startswith("*"):
             continue
         for year, count_idx, avg_idx in [(2024, 2, 5), (2025, 3, 6)]:
             count = number(values[count_idx])
@@ -842,6 +961,7 @@ def normalize_id(value: object) -> str:
 
 def classify_professional_group(gestione: object) -> str:
     text = clean_label(gestione).lower()
+    normalized = normalize_id(text).replace("_", " ")
     if "dipendenti pubblici" in text:
         return "ex_dipendenti_pubblici"
     if "lavoratori dipendenti" in text:
@@ -852,7 +972,7 @@ def classify_professional_group(gestione: object) -> str:
         return "ex_autonomi_agricoli"
     if "gestione separata" in text or "parasubordinati" in text:
         return "ex_partite_iva_parasubordinati"
-    if "assistenz" in text or "invalidita civile" in text or "sociali" in text:
+    if "assistenz" in normalized or "invalidita civile" in normalized or "sociali" in normalized:
         return "prestazioni_assistenziali"
     return "altre_gestioni"
 
@@ -872,6 +992,7 @@ def drop_invalid(rows: Iterable[dict[str, object]]) -> list[dict[str, object]]:
 def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]) -> pd.DataFrame:
     prepare_directories()
     annual_rows: list[dict[str, object]] = []
+    transfer_rows: list[dict[str, object]] = []
     management_rows: list[dict[str, object]] = []
     territorial_rows: list[dict[str, object]] = []
     comparison_rows: list[dict[str, object]] = []
@@ -882,7 +1003,9 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_annual_from_open_data(annual_rows, log_rows)
     build_contributions(annual_rows, log_rows)
     build_consistent_annual_series(annual_rows, log_rows)
+    build_state_transfers(annual_rows, transfer_rows, log_rows)
     build_region_history(territorial_rows, log_rows)
+    build_current_regions_from_api(territorial_rows, log_rows)
     build_eurostat_data(territorial_rows, comparison_rows, log_rows)
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
@@ -902,6 +1025,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
 
     outputs = {
         "tabella_annuale_pensioni": frame("tabella_annuale_pensioni", annual_rows),
+        "tabella_trasferimenti_inps": frame("tabella_trasferimenti_inps", transfer_rows),
         "tabella_gestioni": frame("tabella_gestioni", management_rows),
         "tabella_territoriale": frame("tabella_territoriale", drop_invalid(territorial_rows)),
         "tabella_confronto_europeo": frame("tabella_confronto_europeo", drop_invalid(comparison_rows)),

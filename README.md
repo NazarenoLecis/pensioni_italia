@@ -99,7 +99,9 @@ python scripts/src/make_pension_charts.py
 
 ## Dati e fonti
 
-Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o prevede dati da INPS Open Data, bilanci INPS, OpenBDAP/MEF-RGS, ISTAT, Eurostat, COVIP, MEF Finanze, OECD e Normattiva.
+Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o prevede dati da API Osservatori e Open Data INPS, bilanci INPS, OpenBDAP/MEF-RGS, ISTAT, Eurostat, COVIP, MEF Finanze, OECD e Normattiva.
+
+Le estrazioni seguono un criterio API-first: si interrogano gli endpoint ufficiali quando espongono la misura richiesta; solo in assenza del dato si scaricano direttamente file XLSX, CSV o PDF ufficiali. La pipeline non effettua scraping di pagine HTML.
 
 `metadata/dataset_attesi.csv` definisce i dataset logici necessari. Le whitelist operative collegano questi dataset agli ID tecnici o agli URL scaricabili quando si vuole attivare il download automatico.
 

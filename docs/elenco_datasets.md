@@ -9,14 +9,17 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 |---|---:|---|
 | Rapporti annuali INPS XVIII-XXII | 2018-2022 | Pensioni vigenti, pensionati e reddito pensionistico complessivo |
 | Appendici statistiche INPS XXIII-XXV, capitolo 3 | 2022-2025 | Serie aggiornate, gestioni e distribuzione del reddito pensionistico |
-| Bilanci e Rendiconti generali INPS | 2013-2024 | Entrate contributive accertate |
-| INPS Open Data ID-5291 e ID-5297 | 2012-2016 | Spesa e pensionati per regione |
+| Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
+| Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
+| API Osservatori statistici INPS 413 e 416 | 2024 | Pensionati, pensioni e importo medio lordo per regione |
+| INPS Open Data ID-5291 e ID-5297 | 2012-2016 | Serie territoriali storiche di spesa e pensionati |
 | Casellario dei pensionati, report 2024 | 2024 | Pensioni per classe di importo e relativa spesa |
 | Eurostat `spr_exp_pens` | 2000-2024 | Spesa pensionistica ESSPROS in percentuale del PIL per paese |
 | Eurostat `demo_r_pjanaggr3` | dal 2012 | Popolazione regionale per il rapporto pensionati/popolazione |
 | Eurostat `nama_10r_2gdp` | dal 2012 | PIL regionale per il rapporto spesa pensionistica/PIL |
 
 Le serie nazionali 2018-2025 provengono dallo stesso impianto di tavole annuali. I vecchi CSV Open Data con perimetri diversi restano nell'inventario, ma non vengono concatenati alla serie pubblicata.
+La pipeline usa le API ufficiali quando l'indicatore e' disponibile. Ricorre a download diretti di file ufficiali soltanto come fallback e non esegue scraping di pagine HTML.
 
 ## Conteggio per ambito
 
