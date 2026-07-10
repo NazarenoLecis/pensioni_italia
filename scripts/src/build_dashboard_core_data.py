@@ -40,6 +40,7 @@ APPENDICI_BILANCIO = [
     (2025, "inps_appendice_xxv", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxv-rapporto-annuale/2_Le_principali_voci_di_bilancio_2026.xlsx"),
 ]
 CASELLARIO_2024_PDF_URL = "https://servizi2.inps.it/servizi/osservatoristatistici/api/getAllegato/?idAllegato=1007"
+INPS_SOCIAL_REPORT_2017_2021_URL = "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/bilancio-sociale/3351KEY-tomo_a_rendiconto_sociale_2017-2021_e_relazione_fine_mandato.pdf"
 OECD_PUBLIC_PENSION_SPENDING_URL = "https://stat.link/files/e40274c1-en/92ur17.xlsx"
 GIAS_COMPONENT_REPORTS = [
     {
@@ -1025,6 +1026,30 @@ def build_region_history(territorial_rows: list[dict[str, object]], log: list[di
     log.append({"fonte": "inps_open_data", "tabella": "tabella_territoriale", "righe": len(pensioners) + len(spending), "stato": "ok"})
 
 
+def build_region_bridge_2017_2019(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Colma i pensionati regionali 2017-2019 dalla tavola 0.2.1 INPS."""
+    try:
+        import fitz
+    except ImportError:
+        return
+    path = RAW_DATA_DIR / "inps_sociale" / "rendiconto_sociale_2017_2021.pdf"
+    document = fitz.open(stream=request_bytes(INPS_SOCIAL_REPORT_2017_2021_URL, path), filetype="pdf")
+    pages = [page.get_text() for page in document if "Tavola 0.2.1 -  Pensionati per regione" in page.get_text()]
+    document.close()
+    regions = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
+    for page_text, years in zip(pages[-2:], [(2017, 2018), (2019, 2020)]):
+        values = [int(value.replace(".", "")) for value in re.findall(r"\b\d{1,3}\.\d{3}\b", page_text)]
+        values = values[: len(regions) * 6]
+        if len(values) != len(regions) * 6:
+            continue
+        for index, region in enumerate(regions):
+            row = values[index * 6:(index + 1) * 6]
+            for year, value in [(years[0], row[2]), (years[1], row[5])]:
+                if year <= 2019:
+                    territorial_rows.append(territorial(year, "regione", region, "pensionati", value, "numero", "inps_rendiconto_sociale", "Pensionati per regione al 31 dicembre; Rendiconto sociale INPS 2017-2021, tavola 0.2.1."))
+    log.append({"fonte": "inps_rendiconto_sociale", "tabella": "tabella_territoriale", "righe": len(regions) * 3, "stato": "ok"})
+
+
 def build_eurostat_data(
     territorial_rows: list[dict[str, object]],
     comparison_rows: list[dict[str, object]],
@@ -1264,6 +1289,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_state_transfers(annual_rows, transfer_rows, log_rows)
     build_state_transfer_components(transfer_rows, log_rows)
     build_region_history(territorial_rows, log_rows)
+    build_region_bridge_2017_2019(territorial_rows, log_rows)
     build_current_regions_from_api(territorial_rows, log_rows)
     build_eurostat_data(territorial_rows, comparison_rows, log_rows)
     build_oecd_pension_spending(comparison_rows, log_rows)
