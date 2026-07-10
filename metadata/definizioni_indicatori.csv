@@ -17,6 +17,9 @@ pensioni_liquidate,flussi,Pensioni liquidate,numero,Nuovi trattamenti liquidati.
 contributi,contributi,Entrate contributive,euro,Entrate contributive per gestione.
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
+spesa_pensionistica_pil_esspros,confronto_europeo,Spesa pensionistica ESSPROS su PIL,percentuale_pil,Indicatore armonizzato Eurostat per confrontare i paesi europei.
+pensionati_percentuale_popolazione,derivato,Pensionati sulla popolazione residente,percentuale,Pensionati regionali INPS divisi per popolazione residente Eurostat dello stesso anno.
+spesa_pensionistica_percentuale_pil,derivato,Spesa pensionistica regionale su PIL regionale,percentuale_pil,Spesa regionale INPS divisa per PIL regionale Eurostat dello stesso anno.
 pensionati_su_occupati,derivato,Pensionati su occupati,rapporto,Indicatore demografico-lavoristico.
 indice_dipendenza_anziani,demografia,Indice di dipendenza degli anziani,rapporto o percentuale,Popolazione anziana rispetto alla popolazione in eta attiva.
 spesa_ivs,contabilita_inps,Spesa prestazioni IVS,euro,Invalidita vecchiaia superstiti secondo fonte INPS.
