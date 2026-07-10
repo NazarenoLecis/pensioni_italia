@@ -74,6 +74,8 @@ INPS_INSURED_REPORTS = [
         "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiii-rapporto-annuale/RAPPORTO%20ANNUALE_WEB.pdf",
         "marker": "Tabella 1.2 - Lavoratori assicurati INPS",
         "years": [2019, 2020, 2021, 2022, 2023],
+        "week_years": [2019, 2020, 2021, 2022, 2023],
+        "skip_week_values": 0,
         "total_label": "TOTALE complessivo",
     },
     {
@@ -81,10 +83,13 @@ INPS_INSURED_REPORTS = [
         "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiv-rapporto-annuale/RA_XXIV_2025.pdf",
         "marker": "Tabella 1.3 - Lavoratori assicurati INPS",
         "years": [2014, 2019, 2022, 2023, 2024],
+        "week_years": [2014, 2019, 2024],
+        "skip_week_values": 1,
         "total_label": "TOTALE",
     },
 ]
 INPS_OBSERVATORY_API = "https://servizi2.inps.it/servizi/osservatoristatistici/api"
+INPS_OPEN_DATA_API = "https://serviziweb2.inps.it/odapi"
 
 EUROSTAT_PENSION_GDP_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/spr_exp_pens"
@@ -145,17 +150,20 @@ ENTRATE_CONTRIBUTIVE_RENDICONTI = {
     2024: 284_047_000_000,
 }
 
-OPEN_DATA_URLS = {
-    "pensioni_vigenti_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5080.csv",
-    "spesa_casellario_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5296.csv",
-    "pensionati_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5300.csv",
-    "pensionati_regioni_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5297.csv",
-    "spesa_regioni_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5291.csv",
-    "conto_economico_2013_2014": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-2881.csv",
-    "conto_economico_2015": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5373.csv",
-    "conto_economico_2016": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5383.csv",
-    "conto_economico_2017": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5393.csv",
-    "conto_economico_2018": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5569.csv",
+OPEN_DATA_PACKAGES = {
+    "pensioni_vigenti_storico": 1656,
+    "spesa_casellario_storico": 1811,
+    "pensionati_storico": 1820,
+    "pensionati_regioni_storico": 1812,
+    "spesa_regioni_storico": 1805,
+    "pensionati_regioni_classi_importo_storico": 1988,
+    "pensioni_classi_importo_storico": 1650,
+    "pensionati_reddito_classi_2014": 1182,
+    "conto_economico_2013_2014": 917,
+    "conto_economico_2015": 1952,
+    "conto_economico_2016": 1962,
+    "conto_economico_2017": 1973,
+    "conto_economico_2018": 2118,
 }
 
 
@@ -226,9 +234,23 @@ def jsonstat_geo_time(payload: dict[str, object]) -> dict[tuple[str, int], float
     return result
 
 
+def open_data_resource_url(name: str, preferred_format: str = "csv") -> str:
+    package_id = OPEN_DATA_PACKAGES[name]
+    metadata_path = RAW_DATA_DIR / "inps_open_data_catalog" / f"package_{package_id}.json"
+    payload = request_json(f"{INPS_OPEN_DATA_API}/package_show?id={package_id}", metadata_path)
+    if not payload.get("success", False):
+        raise ValueError(f"Open Data package {package_id} non disponibile")
+    resources = payload.get("result", {}).get("resources", [])
+    preferred = preferred_format.lower()
+    for resource in resources:
+        if str(resource.get("format", "")).lower() == preferred and resource.get("url"):
+            return str(resource["url"])
+    raise ValueError(f"Open Data package {package_id} senza risorsa {preferred_format}")
+
+
 def read_open_csv(name: str) -> pd.DataFrame:
-    url = OPEN_DATA_URLS[name]
-    raw_path = RAW_DATA_DIR / "inps_open_data" / Path(url).name
+    url = open_data_resource_url(name, "csv")
+    raw_path = RAW_DATA_DIR / "inps_open_data" / f"{name}_{Path(url).name}"
     data = request_bytes(url, raw_path)
     first_line = data.splitlines()[0].decode("latin-1", errors="ignore")
     separator = ";" if first_line.count(";") > first_line.count(",") else ","
@@ -292,6 +314,12 @@ def class_bounds(label: object) -> tuple[float | None, float | None]:
     if "-" in text:
         left, right = text.split("-", 1)
         return number(left), number(right)
+    values = [number(value) for value in re.findall(r"\d+(?:[,.]\d+)?", text)]
+    values = [value for value in values if value is not None]
+    if text.startswith("da") and len(values) >= 2:
+        return values[0], values[1]
+    if len(values) == 1:
+        return 0.0, values[0]
     return None, None
 
 
@@ -495,7 +523,7 @@ def build_state_transfers(
         table = read_open_csv(name)
         table["Importo"] = table["Importo"].map(number)
         labels = table["Denominazione conto"].map(clean_label).str.lower()
-        matches = table[labels.str.contains("trasferimenti dal bilancio dello stato", na=False)]
+        matches = table[labels.isin({"trasferimenti da parte dello stato", "trasferimenti dal bilancio dello stato"})]
         for year, group in matches.groupby("Anno", dropna=True):
             parsed = group["Importo"].sum()
             if int(year) not in values_by_year and pd.notna(parsed):
@@ -1004,6 +1032,65 @@ def build_pdf_pension_distribution(distribution_rows: list[dict[str, object]], l
     log.append({"fonte": "inps_casellario_2024", "tabella": "tabella_distribuzione_pensionati", "righe": len(table_rows), "stato": "ok" if table_rows else "tabella_non_trovata"})
 
 
+def build_historical_distribution_from_open_data(distribution_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    pensioners = read_open_csv("pensionati_regioni_classi_importo_storico")
+    pensioners["Numero pensionati"] = pensioners["Numero pensionati"].map(number)
+    added = 0
+    grouped_pensioners = pensioners.groupby(["Anno", "Classe importo"], dropna=True)["Numero pensionati"].sum()
+    for (year, label), count in grouped_pensioners.items():
+        min_value, max_value = class_bounds(label)
+        distribution_rows.append(
+            distribution(
+                int(year),
+                "pensionati_inps",
+                "reddito_pensionistico_mensile_complessivo",
+                label,
+                min_value,
+                max_value,
+                "Totale",
+                "Italia",
+                "pensionati_per_classe_reddito_pensionistico",
+                count,
+                "numero",
+                "inps_open_data",
+                "Pensionati del sistema pensionistico italiano per regione e classe di importo; valori aggregati a Italia dal pacchetto Open Data INPS 1988.",
+            )
+        )
+        added += 1
+
+    pensions = read_open_csv("pensioni_classi_importo_storico")
+    pensions["Importo medio mensile"] = pensions["Importo medio mensile"].map(number)
+    pensions["Importo complessivo annuo"] = pensions["Importo complessivo annuo"].map(number)
+    derived_rows: list[dict[str, object]] = []
+    for _, record in pensions.iterrows():
+        average = number(record["Importo medio mensile"])
+        amount = number(record["Importo complessivo annuo"])
+        if average is None or average <= 0 or amount is None:
+            continue
+        annual_amount = amount * 1_000_000
+        derived_rows.append(
+            {
+                "anno": int(record["Anno"]),
+                "classe": str(record["Classe di importo"]),
+                "spesa": annual_amount,
+                "pensioni": annual_amount / average / 12,
+            }
+        )
+    if derived_rows:
+        frame_rows = pd.DataFrame(derived_rows)
+        grouped = frame_rows.groupby(["anno", "classe"], dropna=True).sum(numeric_only=True).reset_index()
+        for _, record in grouped.iterrows():
+            min_value, max_value = class_bounds(record["classe"])
+            count = number(record["pensioni"])
+            amount = number(record["spesa"])
+            distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "pensioni_per_classe_importo", count, "numero", "elaborazione_repo", "Numero di pensioni ricavato da importo complessivo annuo e importo medio mensile della classe; pacchetto Open Data INPS 1650."))
+            distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "spesa_per_classe_importo", amount, "euro", "inps_open_data", "Importo complessivo annuo delle pensioni vigenti per classe di importo; pacchetto Open Data INPS 1650."))
+            if count:
+                distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "importo_medio_pensione_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
+                added += 3
+    log.append({"fonte": "inps_open_data", "tabella": "tabella_distribuzione_pensionati", "righe": added, "stato": "ok"})
+
+
 def build_region_history(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
     pensioners = read_open_csv("pensionati_regioni_storico")
     pensioners["Numero beneficiari"] = pensioners["Numero beneficiari"].map(number)
@@ -1034,9 +1121,14 @@ def build_region_bridge_2017_2019(territorial_rows: list[dict[str, object]], log
         return
     path = RAW_DATA_DIR / "inps_sociale" / "rendiconto_sociale_2017_2021.pdf"
     document = fitz.open(stream=request_bytes(INPS_SOCIAL_REPORT_2017_2021_URL, path), filetype="pdf")
-    pages = [page.get_text() for page in document if "Tavola 0.2.1 -  Pensionati per regione" in page.get_text()]
+    pages = [
+        page.get_text()
+        for page in document
+        if "Abruzzo" in page.get_text() and "Veneto" in page.get_text() and "ITALIA" in page.get_text() and "Tavola 0.2.1" in page.get_text()
+    ]
     document.close()
     regions = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
+    added = 0
     for page_text, years in zip(pages[-2:], [(2017, 2018), (2019, 2020)]):
         values = [int(value.replace(".", "")) for value in re.findall(r"\b\d{1,3}\.\d{3}\b", page_text)]
         values = values[: len(regions) * 6]
@@ -1047,7 +1139,8 @@ def build_region_bridge_2017_2019(territorial_rows: list[dict[str, object]], log
             for year, value in [(years[0], row[2]), (years[1], row[5])]:
                 if year <= 2019:
                     territorial_rows.append(territorial(year, "regione", region, "pensionati", value, "numero", "inps_rendiconto_sociale", "Pensionati per regione al 31 dicembre; Rendiconto sociale INPS 2017-2021, tavola 0.2.1."))
-    log.append({"fonte": "inps_rendiconto_sociale", "tabella": "tabella_territoriale", "righe": len(regions) * 3, "stato": "ok"})
+                    added += 1
+    log.append({"fonte": "inps_rendiconto_sociale", "tabella": "tabella_territoriale", "righe": added, "stato": "ok" if added else "tabella_non_trovata"})
 
 
 def build_eurostat_data(
@@ -1094,13 +1187,13 @@ def build_eurostat_data(
     log.append({"fonte": "eurostat", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
 
 
-def insured_workers_from_reports() -> dict[int, float]:
+def insured_workers_from_reports() -> dict[int, dict[str, float]]:
     try:
         import fitz
     except ImportError:
         return {}
 
-    result: dict[int, float] = {}
+    result: dict[int, dict[str, float]] = {}
     cache = RAW_DATA_DIR / "inps_rapporti_assicurati"
     for report in INPS_INSURED_REPORTS:
         path = cache / f"rapporto_{report['name']}.pdf"
@@ -1115,8 +1208,33 @@ def insured_workers_from_reports() -> dict[int, float]:
         if len(values) != len(report["years"]):
             continue
         for year, value in zip(report["years"], values):
-            result[int(year)] = float(value.replace(".", "")) * 1_000
+            result.setdefault(int(year), {})["assicurati"] = float(value.replace(".", "")) * 1_000
+        week_values = re.findall(r"\b\d{1,2},\d\b", tail)
+        skip = int(report.get("skip_week_values", 0))
+        week_values = week_values[skip: skip + len(report.get("week_years", []))]
+        for year, value in zip(report.get("week_years", []), week_values):
+            weeks = number(value)
+            if weeks is not None:
+                result.setdefault(int(year), {})["settimane_medie"] = weeks
     return result
+
+
+def average_insured_from_social_report() -> dict[int, float]:
+    try:
+        import fitz
+    except ImportError:
+        return {}
+    path = RAW_DATA_DIR / "inps_sociale" / "rendiconto_sociale_2017_2021.pdf"
+    document = fitz.open(stream=request_bytes(INPS_SOCIAL_REPORT_2017_2021_URL, path), filetype="pdf")
+    page_text = next((page.get_text() for page in document if "Tavola 0.1 - Numero medio annuo degli assicurati" in page.get_text()), "")
+    document.close()
+    if not page_text:
+        return {}
+    tail = page_text.split("TOTALE", 1)[-1]
+    values = re.findall(r"\b\d{1,3}(?:\.\d{3})+\b", tail)[:4]
+    if len(values) != 4:
+        return {}
+    return {year: float(value.replace(".", "")) for year, value in zip([2017, 2018, 2019, 2020], values)}
 
 
 def build_workers_and_pensioners(
@@ -1149,10 +1267,22 @@ def build_workers_and_pensioners(
                 demography_rows.append({**common, "indicatore_id": "copertura_spesa_contributi", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive INPS in rapporto al reddito pensionistico lordo INPS. Il rapporto resta aggregato e non attribuisce le entrate alle singole prestazioni."})
     for year, insured in sorted(insured_workers_from_reports().items()):
         common = {"anno": year, "area": "Italia", "classe_eta": "Tutte", "sesso": "Totale", "scenario": "osservato"}
-        demography_rows.append({**common, "indicatore_id": "assicurati_inps", "fonte_id": "inps_assicurati_rapporti", "valore": insured, "unita": "numero", "note": "Lavoratori con almeno un contributo o una giornata retribuita nell'anno, al netto delle sovrapposizioni tra gestioni INPS."})
+        count = insured.get("assicurati")
+        weeks = insured.get("settimane_medie")
+        if count:
+            demography_rows.append({**common, "indicatore_id": "assicurati_inps", "fonte_id": "inps_assicurati_rapporti", "valore": count, "unita": "numero", "note": "Lavoratori con almeno un contributo o una giornata retribuita nell'anno, al netto delle sovrapposizioni tra gestioni INPS."})
+        equivalent = count * weeks / 52 if count and weeks else None
+        if equivalent:
+            demography_rows.append({**common, "indicatore_id": "assicurati_inps_ponderati_settimane", "fonte_id": "inps_assicurati_rapporti", "valore": equivalent, "unita": "numero", "note": "Assicurati INPS ponderati per il numero medio di settimane lavorate nell'anno; misura derivata per avvicinare l'intensita' contributiva effettiva."})
+        pensioners = annual_index.get((year, "pensionati", "Italia - complessivi"))
+        if pensioners and equivalent:
+            demography_rows.append({**common, "indicatore_id": "assicurati_inps_per_pensionato", "fonte_id": "inps_assicurati_rapporti", "valore": equivalent / pensioners, "unita": "rapporto", "note": "Assicurati INPS ponderati per settimane lavorate divisi per pensionati complessivi."})
+    for year, insured_average in sorted(average_insured_from_social_report().items()):
+        common = {"anno": year, "area": "Italia", "classe_eta": "Tutte", "sesso": "Totale", "scenario": "osservato"}
+        demography_rows.append({**common, "indicatore_id": "assicurati_medi_annui_inps", "fonte_id": "inps_rendiconto_sociale", "valore": insured_average, "unita": "numero", "note": "Numero medio annuo degli assicurati; Rendiconto sociale INPS 2017-2021, tavola 0.1."})
         pensioners = annual_index.get((year, "pensionati", "Italia - complessivi"))
         if pensioners:
-            demography_rows.append({**common, "indicatore_id": "assicurati_inps_per_pensionato", "fonte_id": "inps_assicurati_rapporti", "valore": insured / pensioners, "unita": "rapporto", "note": "Assicurati INPS nell'anno divisi per pensionati complessivi. Gli assicurati sono un flusso annuo, non uno stock medio di occupati."})
+            demography_rows.append({**common, "indicatore_id": "assicurati_medi_annui_per_pensionato", "fonte_id": "inps_rendiconto_sociale", "valore": insured_average / pensioners, "unita": "rapporto", "note": "Numero medio annuo degli assicurati diviso per pensionati complessivi."})
     log.append({"fonte": "eurostat_lfs", "tabella": "tabella_demografia_lavoro", "righe": len(demography_rows), "stato": "ok"})
 
 
@@ -1297,6 +1427,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
     build_workers_and_pensioners(annual_rows, demography_rows, log_rows)
+    build_historical_distribution_from_open_data(distribution_rows, log_rows)
     build_pdf_pension_distribution(distribution_rows, log_rows)
 
     by_year_indicator_area = {}
