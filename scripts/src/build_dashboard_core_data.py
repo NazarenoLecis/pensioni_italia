@@ -389,6 +389,23 @@ def build_annual_from_open_data(rows: list[dict[str, object]], log: list[dict[st
     log.append({"fonte": "inps_open_data", "tabella": "tabella_annuale_pensioni", "righe": len(rows), "stato": "ok"})
 
 
+def build_management_history_from_open_data(management_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Estende le gestioni INPS 2010-2017 con l'Open Data ufficiale ID-5080."""
+    table = read_open_csv("pensioni_vigenti_storico")
+    table["Numero pensioni"] = table["Numero pensioni"].map(number)
+    table["Importo medio mensile"] = table["Importo medio mensile"].map(number)
+    for (year, gestione), group in table.groupby(["Anno", "Tipo di gestione"], dropna=True):
+        group_name = clean_label(gestione)
+        if not group_name or group_name.lower() == "totale":
+            continue
+        management_rows.append({"anno": int(year), "gestione_id": normalize_id(group_name), "gestione_nome": group_name, "gruppo_gestione": classify_professional_group(group_name), "indicatore_id": "pensioni_vigenti", "fonte_id": "inps_open_data", "valore": group["Numero pensioni"].sum(), "unita": "numero", "note": "Pensioni vigenti per gestione; Open Data INPS ID-5080."})
+        count = group["Numero pensioni"].sum()
+        if count:
+            weighted = (group["Numero pensioni"] * group["Importo medio mensile"]).sum() / count
+            management_rows.append({"anno": int(year), "gestione_id": normalize_id(group_name), "gestione_nome": group_name, "gruppo_gestione": classify_professional_group(group_name), "indicatore_id": "importo_medio_pensione", "fonte_id": "inps_open_data", "valore": weighted, "unita": "euro", "note": "Importo medio mensile ponderato per gestione; Open Data INPS ID-5080."})
+    log.append({"fonte": "inps_open_data", "tabella": "tabella_gestioni", "righe": len(management_rows), "stato": "ok"})
+
+
 def build_contributions(rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
     frames = []
     for name in [
@@ -472,6 +489,16 @@ def build_state_transfers(
                 if year and parsed is not None:
                     target = values_by_year if label.startswith("Trasferimenti") else contributions_by_year
                     target[year] = (parsed * 1_000_000, source_id)
+
+    for name in ["conto_economico_2013_2014", "conto_economico_2015", "conto_economico_2016", "conto_economico_2017", "conto_economico_2018"]:
+        table = read_open_csv(name)
+        table["Importo"] = table["Importo"].map(number)
+        labels = table["Denominazione conto"].map(clean_label).str.lower()
+        matches = table[labels.str.contains("trasferimenti dal bilancio dello stato", na=False)]
+        for year, group in matches.groupby("Anno", dropna=True):
+            parsed = group["Importo"].sum()
+            if int(year) not in values_by_year and pd.notna(parsed):
+                values_by_year[int(year)] = (float(parsed), "inps_open_data_bilanci")
 
     for year, (value, source_id) in sorted(values_by_year.items()):
         transfer_rows.append(
@@ -644,23 +671,28 @@ def observatory_region_measure(observatory_id: str, name: str, year: int, measur
 
 
 def build_current_regions_from_api(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
-    year = 2024
-    pensioners = observatory_region_measure("413", "Beneficiari totali", year, "_FREQ_SUM", "SUM")
-    pensions = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "_FREQ_SUM", "SUM")
-    average_annual = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "Importo medio annuo (euro)", "")
-    for region in REGION_NUTS2:
-        pensioner_count = pensioners.get(region)
-        pension_count = pensions.get(region)
-        average = average_annual.get(region)
-        if pensioner_count is not None:
-            territorial_rows.append(territorial(year, "regione", region, "pensionati", pensioner_count, "numero", "inps_osservatori_api", "Beneficiari totali per regione; API Osservatori statistici INPS, osservatorio 413."))
-        if pension_count is not None:
-            territorial_rows.append(territorial(year, "regione", region, "pensioni_vigenti", pension_count, "numero", "inps_osservatori_api", "Prestazioni pensionistiche per regione; API Osservatori statistici INPS, osservatorio 416."))
-        if average is not None:
-            territorial_rows.append(territorial(year, "regione", region, "importo_medio_pensione_mensile_regionale", average / 12, "euro", "inps_osservatori_api", "Importo lordo medio annuo della prestazione diviso per 12; API Osservatori statistici INPS, osservatorio 416."))
-        if pension_count is not None and average is not None:
-            territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_regionale", pension_count * average, "euro", "elaborazione_repo", "Numero di prestazioni per importo lordo medio annuo; dati API INPS osservatorio 416."))
-    log.append({"fonte": "inps_osservatori_api", "tabella": "tabella_territoriale", "righe": len(pensioners), "stato": "ok"})
+    added = 0
+    for year in range(2017, 2026):
+        try:
+            pensioners = observatory_region_measure("413", "Beneficiari totali", year, "_FREQ_SUM", "SUM")
+            pensions = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "_FREQ_SUM", "SUM")
+            average_annual = observatory_region_measure("416", "Prestazioni pensionistiche totali", year, "Importo medio annuo (euro)", "")
+        except (requests.RequestException, ValueError, KeyError):
+            continue
+        for region in REGION_NUTS2:
+            pensioner_count = pensioners.get(region)
+            pension_count = pensions.get(region)
+            average = average_annual.get(region)
+            if pensioner_count is not None:
+                territorial_rows.append(territorial(year, "regione", region, "pensionati", pensioner_count, "numero", "inps_osservatori_api", "Beneficiari totali per regione; Osservatori statistici INPS."))
+                added += 1
+            if pension_count is not None:
+                territorial_rows.append(territorial(year, "regione", region, "pensioni_vigenti", pension_count, "numero", "inps_osservatori_api", "Prestazioni pensionistiche per regione; Osservatori statistici INPS."))
+            if average is not None:
+                territorial_rows.append(territorial(year, "regione", region, "importo_medio_pensione_mensile_regionale", average / 12, "euro", "inps_osservatori_api", "Importo lordo medio annuo della prestazione diviso per 12; Osservatori statistici INPS."))
+            if pension_count is not None and average is not None:
+                territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_regionale", pension_count * average, "euro", "elaborazione_repo", "Numero di prestazioni per importo lordo medio annuo; Osservatori statistici INPS."))
+    log.append({"fonte": "inps_osservatori_api", "tabella": "tabella_territoriale", "righe": added, "stato": "ok" if added else "anni_non_disponibili"})
 
 
 def append_profession_snapshot(
@@ -1226,6 +1258,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     log_rows: list[dict[str, object]] = []
 
     build_annual_from_open_data(annual_rows, log_rows)
+    build_management_history_from_open_data(management_rows, log_rows)
     build_contributions(annual_rows, log_rows)
     build_consistent_annual_series(annual_rows, log_rows)
     build_state_transfers(annual_rows, transfer_rows, log_rows)
