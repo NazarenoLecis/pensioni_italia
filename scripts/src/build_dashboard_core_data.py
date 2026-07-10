@@ -40,6 +40,33 @@ APPENDICI_BILANCIO = [
     (2025, "inps_appendice_xxv", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxv-rapporto-annuale/2_Le_principali_voci_di_bilancio_2026.xlsx"),
 ]
 CASELLARIO_2024_PDF_URL = "https://servizi2.inps.it/servizi/osservatoristatistici/api/getAllegato/?idAllegato=1007"
+OECD_PUBLIC_PENSION_SPENDING_URL = "https://stat.link/files/e40274c1-en/92ur17.xlsx"
+GIAS_COMPONENT_REPORTS = [
+    {
+        "filename": "2021.pdf",
+        "url": "https://servizi2.inps.it/servizi/ProvvedimentiFE/ProvvedimentiCDA/DownloadFile/21?nomefile=DELIBERAZIONE+N.112+del+13+Luglio+2022.pdf",
+        "years": [(2020, 0), (2021, 2)],
+    },
+    {
+        "filename": "2023.pdf",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/datiebilanci/bilanci-e-rendiconti/rendicontigenerali/documents/2023/rendiconto_parte1/CA2024_0020_Rend_2023_02_Del_All_Rel_CdA_INT.pdf",
+        "years": [(2022, 0), (2023, 1)],
+    },
+    {
+        "filename": "2024.pdf",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/datiebilanci/bilanci-e-rendiconti/rendicontigenerali/documents/2024/CA2025_0087_Rend_2024_02_Del_All_Rel_CdA_INT.pdf",
+        "years": [(2023, 0), (2024, 1)],
+    },
+]
+GIAS_COMPONENTS = [
+    ("oneri_pensionistici", "Oneri pensionistici", r"Per oneri pensionistici"),
+    ("mantenimento_salario", "Mantenimento del salario", r"Per mantenimento del salario"),
+    ("famiglia", "Interventi a sostegno della famiglia", r"Per interventi a sostegno della famiglia"),
+    ("riduzione_oneri_previdenziali", "Riduzioni di oneri previdenziali", r"Per prestaz\.ni economiche derivanti da riduz\.ne di oneri prev\.ziali"),
+    ("sgravi_agevolazioni", "Sgravi e altre agevolazioni", r"Per sgravi degli oneri sociali ed altre agevolazioni"),
+    ("interventi_diversi", "Interventi diversi", r"Per interventi diversi"),
+    ("reddito_cittadinanza_inclusione", "Reddito di cittadinanza e inclusione", r"Per reddito e pensione di cittadinanza(?:- ADI - SFL)?"),
+]
 INPS_INSURED_REPORTS = [
     {
         "name": "xxiii",
@@ -469,6 +496,121 @@ def build_state_transfers(
     log.append({"fonte": "inps_appendici_bilancio", "tabella": "tabella_trasferimenti_inps", "righe": len(transfer_rows), "stato": "ok"})
 
 
+def gias_component_values(page_text: str, pattern: str, expected_values: int) -> list[float]:
+    """Legge i valori in milioni dalla tavola GIAS del rendiconto INPS."""
+    match = re.search(pattern, page_text, flags=re.IGNORECASE)
+    if not match:
+        return []
+    next_row = re.search(r"\n\s*(?:1\.[1-7]\.|2\s*$)", page_text[match.end():], flags=re.MULTILINE)
+    tail = page_text[match.end():match.end() + next_row.start() if next_row else len(page_text)]
+    values = re.findall(r"(?m)^\s*(\d{1,3}(?:\.\d{3})*)\s*$", tail)
+    return [float(value.replace(".", "")) for value in values[:expected_values]]
+
+
+def build_state_transfer_components(transfer_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Estrae le componenti GIAS da PDF ufficiali, quando l'API non le espone."""
+    try:
+        import fitz
+    except ImportError:
+        log.append({"fonte": "inps_rendiconti_gias", "tabella": "tabella_trasferimenti_inps", "righe": 0, "stato": "PyMuPDF_non_disponibile"})
+        return
+
+    values: dict[tuple[int, str], float] = {}
+    cache = RAW_DATA_DIR / "inps_trasferimenti_componenti"
+    for report in GIAS_COMPONENT_REPORTS:
+        path = cache / str(report["filename"])
+        document = fitz.open(stream=request_bytes(str(report["url"]), path), filetype="pdf")
+        page_text = next((page.get_text() for page in document if "TRASFERIMENTI DAL BILANCIO DELLO STATO" in page.get_text() and "Per oneri pensionistici" in page.get_text()), "")
+        document.close()
+        if not page_text:
+            continue
+        required = 3 if str(report["filename"]) == "2021.pdf" else 2
+        for component_id, _, pattern in GIAS_COMPONENTS:
+            parsed = gias_component_values(page_text, pattern, required)
+            if len(parsed) != required:
+                continue
+            for year, column in report["years"]:
+                values[(int(year), component_id)] = parsed[int(column)] * 1_000_000
+
+    for (year, component_id), value in sorted(values.items()):
+        label = next(label for identifier, label, _ in GIAS_COMPONENTS if identifier == component_id)
+        transfer_rows.append(
+            {
+                "anno": year,
+                "fonte_id": "inps_rendiconti_gias",
+                "perimetro": "Gestione interventi assistenziali e sostegno alle gestioni previdenziali (GIAS)",
+                "voce_id": f"gias_{component_id}",
+                "voce_nome": label,
+                "categoria_analitica": component_id,
+                "finalita": "componenti_trasferimenti_gias",
+                "gestione_id": "gias",
+                "indicatore_id": "trasferimenti_stato_inps_per_componente",
+                "valore": value,
+                "unita": "euro",
+                "note": "Rendiconto generale INPS, conto economico GIAS, valori in milioni convertiti in euro. La serie mostra esclusivamente gli anni consuntivi pubblicati nelle tavole omogenee.",
+            }
+        )
+    log.append({"fonte": "inps_rendiconti_gias", "tabella": "tabella_trasferimenti_inps", "righe": len(values), "stato": "ok" if values else "tabella_non_trovata"})
+
+
+def build_oecd_pension_spending(comparison_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Aggiunge il benchmark OCSE da un file XLSX ufficiale scaricabile."""
+    path = RAW_DATA_DIR / "oecd" / "pensions_at_a_glance_2025_table_8_2.xlsx"
+    table = pd.read_excel(BytesIO(request_bytes(OECD_PUBLIC_PENSION_SPENDING_URL, path)), sheet_name="t8-2", header=None)
+    for country, label in [("Italy", "Italia"), ("OECD", "Media OCSE")]:
+        row = table[table.iloc[:, 0].astype(str).str.strip().eq(country)]
+        if row.empty:
+            continue
+        values = row.iloc[0]
+        for year, column in [(2000, 4), (2010, 5), (2020, 6), (2021, 7)]:
+            value = number(values.iloc[column])
+            if value is None:
+                continue
+            comparison_rows.append(
+                {
+                    "anno": year,
+                    "paese": label,
+                    "indicatore_id": "spesa_pensionistica_pil_oecd_pubblica",
+                    "definizione": "Spesa pubblica lorda per pensioni di vecchiaia e superstiti in denaro, percentuale del PIL",
+                    "fonte_id": "oecd_pensions_at_a_glance_2025",
+                    "valore": value,
+                    "unita": "percentuale_pil",
+                    "note": "OECD Pensions at a Glance 2025, tabella 8.2. Il valore 'latest' e' 2021 per l'Italia; la media OCSE combina l'ultimo anno disponibile per paese.",
+                }
+            )
+    log.append({"fonte": "oecd_pensions_at_a_glance_2025", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
+
+
+def build_replacement_rate_projections(comparison_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Registra la tavola RGS 6.4: valori osservati e proiezioni dello scenario base."""
+    years = [2010, 2020, 2030, 2040, 2050, 2060, 2070]
+    series = {
+        ("dipendenti_privati", "obbligatoria", "lordo"): [73.6, 71.7, 72.1, 61.8, 60.3, 58.8, 58.4],
+        ("dipendenti_privati", "obbligatoria", "netto"): [82.7, 81.5, 77.0, 67.4, 66.0, 64.6, 64.1],
+        ("autonomi", "obbligatoria", "lordo"): [72.1, 54.9, 50.0, 46.8, 47.8, 47.0, 46.7],
+        ("autonomi", "obbligatoria", "netto"): [93.0, 77.2, 70.7, 67.0, 68.1, 67.2, 66.9],
+        ("dipendenti_privati", "obbligatoria_complementare", "lordo"): [73.6, 77.1, 79.7, 71.0, 69.2, 66.4, 66.0],
+        ("dipendenti_privati", "obbligatoria_complementare", "netto"): [82.7, 88.4, 86.7, 79.3, 77.6, 74.5, 74.2],
+        ("autonomi", "obbligatoria_complementare", "lordo"): [72.1, 60.2, 57.7, 56.9, 57.6, 55.4, 55.2],
+        ("autonomi", "obbligatoria_complementare", "netto"): [100.8, 89.1, 86.6, 87.2, 88.0, 84.5, 84.3],
+    }
+    for (worker, coverage, gross_net), values in series.items():
+        for year, value in zip(years, values):
+            comparison_rows.append(
+                {
+                    "anno": year,
+                    "paese": "Italia",
+                    "indicatore_id": "tasso_sostituzione_rgs",
+                    "definizione": f"{worker}|{coverage}|{gross_net}",
+                    "fonte_id": "rgs_rapporti",
+                    "valore": value,
+                    "unita": "percentuale",
+                    "note": "RGS, Rapporto n. 26/2025, tavola 6.4, scenario nazionale base. I punti dal 2030 sono proiezioni; le serie nette usano il caso senza coniuge a carico indicato nella tavola.",
+                }
+            )
+    log.append({"fonte": "rgs_rapporti", "tabella": "tabella_confronto_europeo", "righe": len(series) * len(years), "stato": "ok"})
+
+
 def observatory_region_measure(observatory_id: str, name: str, year: int, measure_id: str, statistic: str) -> dict[str, float]:
     request = {
         "id_osservatorio": observatory_id,
@@ -724,7 +866,6 @@ def build_from_appendix(
                 add_annual(rows, year, "pensioni_vigenti", "stock_amministrativo", "inps_appendice_xxv", count, "numero", "Italia - INPS", "Prestazioni INPS vigenti; tabella 3.7.")
                 if avg is not None:
                     add_annual(rows, year, "importo_medio_pensione_mensile", "distribuzione", "inps_appendice_xxv", avg, "euro", "Italia - INPS", "Importo lordo medio mensile per prestazione; tabella 3.7.")
-                    add_annual(rows, year, "spesa_pensionistica_inps_stimata", "stock_amministrativo", "elaborazione_repo", count * avg * 12, "euro", "Italia - INPS", "Stima da numero prestazioni e importo medio mensile della tabella 3.7.")
 
     sheet32 = pd.read_excel(xl, sheet_name="3.2", header=None)
     for _, record in sheet32.iterrows():
@@ -938,7 +1079,7 @@ def build_workers_and_pensioners(
         workers = value_thousands * 1_000
         pensioners = annual_index.get((year, "pensionati", "Italia - complessivi"))
         contributions = annual_index.get((year, "entrate_contributive_inps", "Italia"))
-        spending = annual_index.get((year, "reddito_pensionistico_totale", "Italia - complessivi"))
+        spending = annual_index.get((year, "reddito_pensionistico_totale", "Italia - INPS"))
         common = {"anno": year, "area": "Italia", "classe_eta": "15-64", "sesso": "Totale", "scenario": "osservato"}
         demography_rows.append({**common, "indicatore_id": "occupati", "fonte_id": "eurostat_lfs", "valore": workers, "unita": "numero", "note": "Occupati 15-64 anni secondo EU-LFS. E' un perimetro demografico, non il numero di contribuenti INPS unici."})
         if pensioners:
@@ -946,9 +1087,9 @@ def build_workers_and_pensioners(
             if contributions:
                 demography_rows.append({**common, "indicatore_id": "contributi_inps_per_pensionato", "fonte_id": "inps_rendiconti", "valore": contributions / pensioners, "unita": "euro", "note": "Entrate contributive INPS divise per pensionati; misura finanziaria, non contributo medio individuale."})
             if spending:
-                demography_rows.append({**common, "indicatore_id": "spesa_lorda_per_pensionato", "fonte_id": "inps_rapporti_annuali", "valore": spending / pensioners, "unita": "euro", "note": "Reddito pensionistico lordo complessivo diviso per pensionati."})
+                demography_rows.append({**common, "indicatore_id": "spesa_lorda_per_pensionato", "fonte_id": "inps_rapporti_annuali", "valore": spending / pensioners, "unita": "euro", "note": "Reddito pensionistico lordo INPS diviso per pensionati INPS."})
             if contributions and spending:
-                demography_rows.append({**common, "indicatore_id": "copertura_spesa_contributi", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive INPS in rapporto alla spesa pensionistica lorda complessiva. I perimetri non coincidono perfettamente."})
+                demography_rows.append({**common, "indicatore_id": "copertura_spesa_contributi", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive INPS in rapporto al reddito pensionistico lordo INPS. Il rapporto resta aggregato e non attribuisce le entrate alle singole prestazioni."})
     for year, insured in sorted(insured_workers_from_reports().items()):
         common = {"anno": year, "area": "Italia", "classe_eta": "Tutte", "sesso": "Totale", "scenario": "osservato"}
         demography_rows.append({**common, "indicatore_id": "assicurati_inps", "fonte_id": "inps_assicurati_rapporti", "valore": insured, "unita": "numero", "note": "Lavoratori con almeno un contributo o una giornata retribuita nell'anno, al netto delle sovrapposizioni tra gestioni INPS."})
@@ -1088,9 +1229,12 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_contributions(annual_rows, log_rows)
     build_consistent_annual_series(annual_rows, log_rows)
     build_state_transfers(annual_rows, transfer_rows, log_rows)
+    build_state_transfer_components(transfer_rows, log_rows)
     build_region_history(territorial_rows, log_rows)
     build_current_regions_from_api(territorial_rows, log_rows)
     build_eurostat_data(territorial_rows, comparison_rows, log_rows)
+    build_oecd_pension_spending(comparison_rows, log_rows)
+    build_replacement_rate_projections(comparison_rows, log_rows)
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
     build_workers_and_pensioners(annual_rows, demography_rows, log_rows)

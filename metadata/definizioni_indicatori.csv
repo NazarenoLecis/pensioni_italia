@@ -7,6 +7,7 @@ spesa_pensionistica_inps_stimata,stock_amministrativo,Spesa pensionistica INPS s
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
 trasferimenti_stato_inps_per_finalita,finanza_pubblica,Trasferimenti statali a INPS per finalita,euro,Scomposizione per finalita o categoria analitica.
 trasferimenti_stato_inps_per_voce,finanza_pubblica,Trasferimenti statali a INPS per voce,euro,Scomposizione per voce di bilancio o rendiconto.
+trasferimenti_stato_inps_per_componente,finanza_pubblica,Trasferimenti statali a INPS per componente GIAS,euro,Scomposizione delle componenti della GIAS nei rendiconti generali INPS.
 trasferimenti_stato_inps_oneri_pensionistici,finanza_pubblica,Trasferimenti per oneri pensionistici,euro,Quota trasferimenti connessa a oneri pensionistici.
 trasferimenti_stato_inps_assistenza,finanza_pubblica,Trasferimenti per assistenza,euro,Quota trasferimenti connessa a prestazioni assistenziali.
 trasferimenti_stato_inps_sgravi,finanza_pubblica,Trasferimenti per sgravi contributivi,euro,Quota trasferimenti che copre riduzioni o agevolazioni contributive.
@@ -18,6 +19,8 @@ pensioni_liquidate,flussi,Pensioni liquidate,numero,Nuovi trattamenti liquidati.
 contributi,contributi,Entrate contributive,euro,Entrate contributive per gestione.
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
+spesa_pensionistica_pil_oecd_pubblica,confronto_internazionale,Spesa pubblica pensioni su PIL OCSE,percentuale,Prestazioni pubbliche in denaro di vecchiaia e superstiti; perimetro non sovrapponibile a ESSPROS.
+tasso_sostituzione_rgs,proiezioni,Tasso di sostituzione RGS,percentuale,Rapporto tra prima pensione e ultima retribuzione o reddito nello scenario e profilo definiti dalla RGS.
 spesa_pensionistica_pil_esspros,confronto_europeo,Spesa pensionistica ESSPROS su PIL,percentuale_pil,Indicatore armonizzato Eurostat per confrontare i paesi europei.
 pensionati_percentuale_popolazione,derivato,Pensionati sulla popolazione residente,percentuale,Pensionati regionali INPS divisi per popolazione residente Eurostat dello stesso anno.
 spesa_pensionistica_percentuale_pil,derivato,Spesa pensionistica regionale su PIL regionale,percentuale_pil,Spesa regionale INPS divisa per PIL regionale Eurostat dello stesso anno.
