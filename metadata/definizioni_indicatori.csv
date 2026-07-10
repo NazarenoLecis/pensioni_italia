@@ -1,6 +1,7 @@
 indicatore_id,famiglia_definizione,nome,unita,note
 spesa_pensionistica_inps,contabilita_inps,Spesa pensionistica INPS,euro,Perimetro contabile INPS.
 spesa_pensionistica_casellario,casellario_pensionati,Spesa pensionistica Casellario,euro,Importo complessivo annuo delle prestazioni pensionistiche secondo Casellario.
+spesa_pensionistica_regionale,casellario_pensionati,Spesa pensionistica regionale,euro,Importo complessivo annuo delle prestazioni pensionistiche erogate ai residenti della regione.
 spesa_pensionistica_inps_stimata,stock_amministrativo,Spesa pensionistica INPS stimata da prestazioni,euro,Stima ottenuta da numero prestazioni vigenti per importo medio mensile per 12 quando la fonte non fornisce direttamente il totale.
 trasferimenti_stato_inps,finanza_pubblica,Trasferimenti statali a INPS,euro,Trasferimenti dal bilancio dello Stato.
 trasferimenti_stato_inps_per_finalita,finanza_pubblica,Trasferimenti statali a INPS per finalita,euro,Scomposizione per finalita o categoria analitica.

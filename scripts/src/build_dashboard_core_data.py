@@ -20,13 +20,36 @@ APPENDICE_PENSIONI_URL = (
     "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/"
     "rapporti-annuali/xxv-rapporto-annuale/3_Le_prestazioni_pensionistiche_2026.xlsx"
 )
+APPENDICI_STORICHE = [
+    {
+        "anno": 2023,
+        "fonte_id": "inps_appendice_xxiii",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiii-rapporto-annuale/3_Le_prestazioni_pensionistiche_2024.xlsx",
+    },
+    {
+        "anno": 2024,
+        "fonte_id": "inps_appendice_xxiv",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiv-rapporto-annuale/3_Le_prestazioni_pensionistiche_2025.xlsx",
+    },
+]
 CASELLARIO_2024_PDF_URL = "https://servizi2.inps.it/servizi/osservatoristatistici/api/getAllegato/?idAllegato=1007"
+
+ENTRATE_CONTRIBUTIVE_RENDICONTI = {
+    2018: 231_166_000_000,
+    2019: 236_211_000_000,
+    2020: 225_150_000_000,
+    2021: 236_893_000_000,
+    2022: 256_138_000_000,
+    2023: 269_152_000_000,
+    2024: 284_047_000_000,
+}
 
 OPEN_DATA_URLS = {
     "pensioni_vigenti_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5080.csv",
     "spesa_casellario_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5296.csv",
     "pensionati_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5300.csv",
     "pensionati_regioni_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5297.csv",
+    "spesa_regioni_storico": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5291.csv",
     "conto_economico_2013_2014": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-2881.csv",
     "conto_economico_2015": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5373.csv",
     "conto_economico_2016": "http://www.inps.it/docallegati/Mig/OpenData/CSV/ID-5383.csv",
@@ -77,6 +100,13 @@ def read_appendix() -> pd.ExcelFile:
     return pd.ExcelFile(path)
 
 
+def read_historical_appendix(item: dict[str, object]) -> pd.ExcelFile:
+    year = int(item["anno"])
+    path = RAW_DATA_DIR / "inps_appendici_storiche" / f"prestazioni_pensionistiche_{year}.xlsx"
+    request_bytes(str(item["url"]), path)
+    return pd.ExcelFile(path)
+
+
 def number(value: object) -> float | None:
     if value is None or pd.isna(value):
         return None
@@ -109,7 +139,7 @@ def class_bounds(label: object) -> tuple[float | None, float | None]:
     if "finoa" in text:
         upper = number(text.split("finoa", 1)[1])
         return 0.0, upper
-    if "oltre" in text or "e pi" in text:
+    if "oltre" in text or "epi" in text:
         digits = "".join(ch if ch.isdigit() or ch in ",." else " " for ch in text)
         parts = [number(part) for part in digits.split() if number(part) is not None]
         return (parts[0], None) if parts else (None, None)
@@ -228,21 +258,128 @@ def build_contributions(rows: list[dict[str, object]], log: list[dict[str, objec
     table = pd.concat(frames, ignore_index=True)
     table["voce_norm"] = table["Denominazione conto"].astype(str).str.lower()
     table["Importo"] = table["Importo"].map(number)
-    mask = table["voce_norm"].str.contains("aliquote contributive", na=False)
-    contribution_rows = table.loc[mask].drop_duplicates(["Anno", "Importo"])
-    for anno, group in contribution_rows.groupby("Anno", dropna=True):
+    mask = table["voce_norm"].str.contains(
+        "aliquote contributive|quote di partecipazione degli iscritti all.onere di specifiche gestioni",
+        regex=True,
+        na=False,
+    )
+    contribution_rows = table.loc[mask].copy()
+    contribution_rows["voce_norm"] = contribution_rows["voce_norm"].str.strip()
+    contribution_rows = contribution_rows.drop_duplicates(["Anno", "voce_norm", "Importo"])
+    for anno, group in contribution_rows[contribution_rows["Anno"] < 2018].groupby("Anno", dropna=True):
         add_annual(
             rows,
             int(anno),
             "entrate_contributive_inps",
             "contributi",
-            "inps_open_data",
+            "inps_bilanci",
             group["Importo"].sum(),
             "euro",
             "Italia",
-            "Conto economico generale INPS, voce 'aliquote contributive a carico dei datori di lavoro e/o degli iscritti'.",
+            "Entrate contributive INPS: aliquote contributive e quote di partecipazione degli iscritti, conto economico generale.",
+        )
+    for anno, valore in ENTRATE_CONTRIBUTIVE_RENDICONTI.items():
+        add_annual(
+            rows,
+            anno,
+            "entrate_contributive_inps",
+            "contributi",
+            "inps_rendiconti",
+            valore,
+            "euro",
+            "Italia",
+            "Entrate contributive accertate di competenza finanziaria; rendiconti generali INPS.",
         )
     log.append({"fonte": "inps_open_data_bilanci", "tabella": "tabella_annuale_pensioni", "righe": len(contribution_rows), "stato": "ok"})
+
+
+def append_profession_snapshot(
+    xl: pd.ExcelFile,
+    year: int,
+    source_id: str,
+    profession_rows: list[dict[str, object]],
+) -> None:
+    sheet = pd.read_excel(xl, sheet_name="3.9", header=None)
+    for _, record in sheet.iterrows():
+        values = record.tolist()
+        gestione = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
+        if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione", "TOTALE"} or gestione.startswith("*") or gestione.startswith("di cui") or gestione.startswith("-"):
+            continue
+        profession_rows.append(
+            {
+                "anno": year,
+                "fonte_id": source_id,
+                "gestione_id": normalize_id(gestione),
+                "gestione_nome": clean_label(gestione),
+                "categoria_professionale": classify_professional_group(gestione),
+                "criterio_classificazione": "gestione_previdenziale",
+                "tipo_pensione": "previdenziale",
+                "sesso": "Totale",
+                "classe_eta": "Tutte",
+                "territorio": "Italia",
+                "indicatore_id": "prestazioni_per_categoria_professionale",
+                "pensionati": pd.NA,
+                "prestazioni": number(values[8] if len(values) > 8 else None),
+                "importo_complessivo": pd.NA,
+                "importo_medio_annuo": pd.NA,
+                "importo_medio_mensile": number(values[10] if len(values) > 10 else None),
+                "unita": "numero",
+                "duplicazione_teste": "prestazioni_non_persone",
+                "note": f"Prestazioni previdenziali INPS per gestione; tabella 3.9, anno {year}. La categoria e' ricostruita dalla gestione.",
+            }
+        )
+
+
+def build_from_historical_appendices(
+    rows: list[dict[str, object]],
+    management_rows: list[dict[str, object]],
+    profession_rows: list[dict[str, object]],
+    log: list[dict[str, object]],
+) -> None:
+    for item in APPENDICI_STORICHE:
+        year = int(item["anno"])
+        source_id = str(item["fonte_id"])
+        xl = read_historical_appendix(item)
+
+        sheet31 = pd.read_excel(xl, sheet_name="3.1", header=None)
+        current_group = ""
+        for _, record in sheet31.iterrows():
+            values = record.tolist()
+            label = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
+            if label in {"Pensionati complessivi", "Di cui pensionati INPS"}:
+                current_group = label
+            if label != "TOTALE" or not current_group:
+                continue
+            area = "Italia - complessivi" if current_group == "Pensionati complessivi" else "Italia - INPS"
+            note = f"Appendice statistica Rapporto annuale INPS, tabella 3.1, anno {year}."
+            add_annual(rows, year, "pensionati", "persone", source_id, values[2], "numero", area, note)
+            add_annual(rows, year, "reddito_pensionistico_totale", "reddito_pensionistico", source_id, number(values[4]) * 1_000_000, "euro", area, note)
+            add_annual(rows, year, "reddito_pensionistico_medio_mensile", "reddito_pensionistico", source_id, values[6], "euro", area, note)
+
+        if year == 2023:
+            sheet37 = pd.read_excel(xl, sheet_name="3.7", header=None)
+            for _, record in sheet37.iterrows():
+                values = record.tolist()
+                gestione = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
+                if not gestione or gestione.startswith("Tabella") or gestione in {"Gestione"} or gestione.startswith("*"):
+                    continue
+                for data_year, count_idx, avg_idx in [(2022, 2, 5), (2023, 3, 6)]:
+                    count = number(values[count_idx])
+                    avg = number(values[avg_idx])
+                    if count is None:
+                        continue
+                    if gestione == "TOTALE":
+                        add_annual(rows, data_year, "pensioni_vigenti", "stock_amministrativo", source_id, count, "numero", "Italia - INPS", "Prestazioni INPS vigenti; tabella 3.7.")
+                        if avg is not None:
+                            add_annual(rows, data_year, "importo_medio_pensione_mensile", "distribuzione", source_id, avg, "euro", "Italia - INPS", "Importo lordo medio mensile per prestazione; tabella 3.7.")
+                        continue
+                    group = classify_professional_group(gestione)
+                    management_rows.append({"anno": data_year, "gestione_id": normalize_id(gestione), "gestione_nome": clean_label(gestione), "gruppo_gestione": group, "indicatore_id": "pensioni_vigenti", "fonte_id": source_id, "valore": count, "unita": "numero", "note": "Prestazioni INPS vigenti per gestione; tabella 3.7."})
+                    if avg is not None:
+                        management_rows.append({"anno": data_year, "gestione_id": normalize_id(gestione), "gestione_nome": clean_label(gestione), "gruppo_gestione": group, "indicatore_id": "importo_medio_pensione", "fonte_id": source_id, "valore": avg, "unita": "euro", "note": "Importo lordo medio mensile per prestazione; tabella 3.7."})
+
+        append_profession_snapshot(xl, year, source_id, profession_rows)
+        log.append({"fonte": source_id, "tabella": "core_dashboard", "righe": len(rows) + len(management_rows) + len(profession_rows), "stato": "ok"})
 
 
 def append_sheet_row(sheet: pd.DataFrame, label: str) -> list[object]:
@@ -436,6 +573,8 @@ def build_pdf_pension_distribution(distribution_rows: list[dict[str, object]], l
         if not row or str(row[0]).strip().lower() == "totale":
             continue
         label = clean_label(row[0])
+        if label.startswith("5.000"):
+            label = "5.000,00 e più"
         min_value, max_value = class_bounds(label)
         count = number(row[1] if len(row) > 1 else None)
         amount = number(row[3] if len(row) > 3 else None)
@@ -447,11 +586,25 @@ def build_pdf_pension_distribution(distribution_rows: list[dict[str, object]], l
 
 
 def build_region_history(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
-    table = read_open_csv("pensionati_regioni_storico")
-    table["Numero beneficiari"] = table["Numero beneficiari"].map(number)
-    for (anno, regione), group in table.groupby(["Anno", "Regione"], dropna=True):
-        territorial_rows.append(territorial(int(anno), "regione", str(regione), "pensionati", group["Numero beneficiari"].sum(), "numero", "inps_open_data", "Beneficiari del sistema pensionistico italiano per regione; dataset ID-5297."))
-    log.append({"fonte": "inps_open_data", "tabella": "tabella_territoriale", "righe": len(table), "stato": "ok"})
+    pensioners = read_open_csv("pensionati_regioni_storico")
+    pensioners["Numero beneficiari"] = pensioners["Numero beneficiari"].map(number)
+    pensioner_totals = pensioners.groupby(["Anno", "Regione"], dropna=True)["Numero beneficiari"].sum()
+
+    spending = read_open_csv("spesa_regioni_storico")
+    spending["Importo complessivo annuo"] = spending["Importo complessivo annuo"].map(number)
+    spending_totals = spending.groupby(["Anno", "Regione"], dropna=True)["Importo complessivo annuo"].sum() * 1_000_000
+
+    for (anno, regione), pensioner_count in pensioner_totals.items():
+        year = int(anno)
+        name = str(regione)
+        territorial_rows.append(territorial(year, "regione", name, "pensionati", pensioner_count, "numero", "inps_open_data", "Beneficiari del sistema pensionistico italiano per regione; dataset ID-5297."))
+        total_spending = spending_totals.get((anno, regione))
+        if total_spending is None or pd.isna(total_spending):
+            continue
+        territorial_rows.append(territorial(year, "regione", name, "spesa_pensionistica_regionale", total_spending, "euro", "inps_open_data", "Importo complessivo annuo delle pensioni per regione; dataset ID-5291."))
+        if pensioner_count:
+            territorial_rows.append(territorial(year, "regione", name, "reddito_pensionistico_medio_mensile", total_spending / pensioner_count / 12, "euro", "elaborazione_repo", "Spesa pensionistica regionale divisa per pensionati e per 12 mesi; dataset INPS ID-5291 e ID-5297."))
+    log.append({"fonte": "inps_open_data", "tabella": "tabella_territoriale", "righe": len(pensioners) + len(spending), "stato": "ok"})
 
 
 def territorial(anno: int, livello: str, nome: str, indicatore: str, valore: object, unita: str, fonte: str, note: str) -> dict[str, object]:
@@ -566,6 +719,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_annual_from_open_data(annual_rows, log_rows)
     build_contributions(annual_rows, log_rows)
     build_region_history(territorial_rows, log_rows)
+    build_from_historical_appendices(annual_rows, management_rows, profession_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
     build_pdf_pension_distribution(distribution_rows, log_rows)
 
