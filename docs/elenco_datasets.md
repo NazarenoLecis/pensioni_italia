@@ -12,8 +12,10 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
 | Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
 | API Osservatori statistici INPS 413 e 416 | 2024 | Pensionati, pensioni e importo medio lordo per regione |
+| Rapporti annuali INPS XXIII e XXIV, lavoratori assicurati | 2014, 2019-2024 | Assicurati INPS al netto delle sovrapposizioni tra gestioni e rapporto con i pensionati |
 | INPS Open Data ID-5291 e ID-5297 | 2012-2016 | Serie territoriali storiche di spesa e pensionati |
 | Casellario dei pensionati, report 2024 | 2024 | Pensioni per classe di importo e relativa spesa |
+| Eurostat `lfsi_emp_a` | 2010-2025 | Occupati 15-64 anni e rapporto demografico con i pensionati |
 | Eurostat `spr_exp_pens` | 2000-2024 | Spesa pensionistica ESSPROS in percentuale del PIL per paese |
 | Eurostat `demo_r_pjanaggr3` | dal 2012 | Popolazione regionale per il rapporto pensionati/popolazione |
 | Eurostat `nama_10r_2gdp` | dal 2012 | PIL regionale per il rapporto spesa pensionistica/PIL |
@@ -125,4 +127,6 @@ La pipeline usa le API ufficiali quando l'indicatore e' disponibile. Ricorre a d
 - La dashboard principale deve usare dati trasformati nelle tabelle finali, non direttamente questo inventario.
 - `pensioni` indica trattamenti; `pensionati` o `beneficiari` indica persone.
 - La distribuzione dei trattamenti per classe di importo non misura il reddito pensionistico complessivo della persona.
+- Gli assicurati INPS hanno almeno un contributo o una giornata retribuita nell'anno e sono deduplicati tra gestioni; non sono uno stock medio di occupati equivalenti a tempo pieno.
+- No-tax area e detrazioni riguardano l'IRPEF netta e non implicano, in generale, l'assenza di contribuzione previdenziale.
 - La serie storica dell'aliquota IVS per dipendenti ordinari e' segnata come fonte da ricostruire, distinta dalle aliquote per autonomi disponibili nei CSV INPS.

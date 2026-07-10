@@ -103,6 +103,8 @@ Le fonti sono registrate in `metadata/registro_fonti.csv`. Il progetto usa o pre
 
 Le estrazioni seguono un criterio API-first: si interrogano gli endpoint ufficiali quando espongono la misura richiesta; solo in assenza del dato si scaricano direttamente file XLSX, CSV o PDF ufficiali. La pipeline non effettua scraping di pagine HTML.
 
+Per il blocco lavoro la pipeline combina gli occupati 15-64 dell'API Eurostat con i pensionati INPS e scarica dai Rapporti annuali ufficiali la serie degli assicurati INPS. Gli assicurati sono persone con almeno un contributo o una giornata retribuita nell'anno, deduplicate tra gestioni: non coincidono con lo stock medio degli occupati ne' con i contribuenti IRPEF con imposta netta positiva.
+
 `metadata/dataset_attesi.csv` definisce i dataset logici necessari. Le whitelist operative collegano questi dataset agli ID tecnici o agli URL scaricabili quando si vuole attivare il download automatico.
 
 `metadata/elenco_datasets.csv` e `docs/elenco_datasets.md` inventariano i dataset INPS individuati dal catalogo Open Data, classificandoli per ambito dashboard, priorita', formati disponibili, analisi possibili e stato d'uso. Questo file serve a decidere cosa trasformare nelle tabelle finali senza confondere catalogo e dato gia' pronto.

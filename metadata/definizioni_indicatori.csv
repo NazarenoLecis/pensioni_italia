@@ -43,6 +43,12 @@ importo_medio_pensione_mensile,distribuzione,Importo medio mensile della pension
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
 occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
+occupati_per_pensionato,derivato,Occupati per pensionato,rapporto,Occupati 15-64 anni divisi per pensionati complessivi.
+assicurati_inps,lavoro,Assicurati INPS,numero,Lavoratori con almeno un contributo o una giornata retribuita nell'anno al netto delle sovrapposizioni tra gestioni.
+assicurati_inps_per_pensionato,derivato,Assicurati INPS per pensionato,rapporto,Assicurati INPS nell'anno divisi per pensionati complessivi; non e' un rapporto tra due stock medi.
+contributi_inps_per_pensionato,derivato,Entrate contributive INPS per pensionato,euro,Indicatore finanziario aggregato; non rappresenta il contributo medio della singola persona.
+spesa_lorda_per_pensionato,derivato,Spesa pensionistica lorda per pensionato,euro,Reddito pensionistico lordo complessivo diviso per pensionati.
+copertura_spesa_contributi,derivato,Copertura della spesa tramite contributi,percentuale,Entrate contributive INPS divise per spesa pensionistica lorda complessiva; perimetri da leggere nelle note.
 tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo salvo diversa indicazione.
 produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
 salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Iterable
 
@@ -39,6 +40,22 @@ APPENDICI_BILANCIO = [
     (2025, "inps_appendice_xxv", "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxv-rapporto-annuale/2_Le_principali_voci_di_bilancio_2026.xlsx"),
 ]
 CASELLARIO_2024_PDF_URL = "https://servizi2.inps.it/servizi/osservatoristatistici/api/getAllegato/?idAllegato=1007"
+INPS_INSURED_REPORTS = [
+    {
+        "name": "xxiii",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiii-rapporto-annuale/RAPPORTO%20ANNUALE_WEB.pdf",
+        "marker": "Tabella 1.2 - Lavoratori assicurati INPS",
+        "years": [2019, 2020, 2021, 2022, 2023],
+        "total_label": "TOTALE complessivo",
+    },
+    {
+        "name": "xxiv",
+        "url": "https://www.inps.it/content/dam/inps-site/pdf/dati-analisi-bilanci/rapporti-annuali/xxiv-rapporto-annuale/RA_XXIV_2025.pdf",
+        "marker": "Tabella 1.3 - Lavoratori assicurati INPS",
+        "years": [2014, 2019, 2022, 2023, 2024],
+        "total_label": "TOTALE",
+    },
+]
 INPS_OBSERVATORY_API = "https://servizi2.inps.it/servizi/osservatoristatistici/api"
 
 EUROSTAT_PENSION_GDP_URL = (
@@ -52,6 +69,10 @@ EUROSTAT_POPULATION_URL = (
 EUROSTAT_REGIONAL_GDP_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nama_10r_2gdp"
     "?lang=en&unit=MIO_EUR&sinceTimePeriod=2012"
+)
+EUROSTAT_EMPLOYMENT_URL = (
+    "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/lfsi_emp_a"
+    "?lang=en&indic_em=EMP_LFS&unit=THS_PER&sex=T&age=Y15-64&geo=IT&sinceTimePeriod=2010"
 )
 
 EU_COUNTRIES = {
@@ -875,6 +896,68 @@ def build_eurostat_data(
     log.append({"fonte": "eurostat", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
 
 
+def insured_workers_from_reports() -> dict[int, float]:
+    try:
+        import fitz
+    except ImportError:
+        return {}
+
+    result: dict[int, float] = {}
+    cache = RAW_DATA_DIR / "inps_rapporti_assicurati"
+    for report in INPS_INSURED_REPORTS:
+        path = cache / f"rapporto_{report['name']}.pdf"
+        request_bytes(str(report["url"]), path)
+        document = fitz.open(path)
+        page_text = next((page.get_text() for page in document if str(report["marker"]) in page.get_text()), "")
+        document.close()
+        if not page_text:
+            continue
+        tail = page_text.split(str(report["total_label"]), 1)[-1]
+        values = re.findall(r"\b\d{1,3}\.\d{3}\b", tail)[: len(report["years"])]
+        if len(values) != len(report["years"]):
+            continue
+        for year, value in zip(report["years"], values):
+            result[int(year)] = float(value.replace(".", "")) * 1_000
+    return result
+
+
+def build_workers_and_pensioners(
+    annual_rows: list[dict[str, object]],
+    demography_rows: list[dict[str, object]],
+    log: list[dict[str, object]],
+) -> None:
+    cache = RAW_DATA_DIR / "eurostat"
+    employment = jsonstat_geo_time(request_json(EUROSTAT_EMPLOYMENT_URL, cache / "lfsi_emp_a_it_y15_64.json"))
+    annual_index = {
+        (int(row["anno"]), str(row["indicatore_id"]), str(row["area"])): number(row["valore"])
+        for row in annual_rows
+    }
+    for (geo, year), value_thousands in sorted(employment.items()):
+        if geo != "IT":
+            continue
+        workers = value_thousands * 1_000
+        pensioners = annual_index.get((year, "pensionati", "Italia - complessivi"))
+        contributions = annual_index.get((year, "entrate_contributive_inps", "Italia"))
+        spending = annual_index.get((year, "reddito_pensionistico_totale", "Italia - complessivi"))
+        common = {"anno": year, "area": "Italia", "classe_eta": "15-64", "sesso": "Totale", "scenario": "osservato"}
+        demography_rows.append({**common, "indicatore_id": "occupati", "fonte_id": "eurostat_lfs", "valore": workers, "unita": "numero", "note": "Occupati 15-64 anni secondo EU-LFS. E' un perimetro demografico, non il numero di contribuenti INPS unici."})
+        if pensioners:
+            demography_rows.append({**common, "indicatore_id": "occupati_per_pensionato", "fonte_id": "eurostat_inps", "valore": workers / pensioners, "unita": "rapporto", "note": "Occupati 15-64 Eurostat divisi per pensionati complessivi INPS."})
+            if contributions:
+                demography_rows.append({**common, "indicatore_id": "contributi_inps_per_pensionato", "fonte_id": "inps_rendiconti", "valore": contributions / pensioners, "unita": "euro", "note": "Entrate contributive INPS divise per pensionati; misura finanziaria, non contributo medio individuale."})
+            if spending:
+                demography_rows.append({**common, "indicatore_id": "spesa_lorda_per_pensionato", "fonte_id": "inps_rapporti_annuali", "valore": spending / pensioners, "unita": "euro", "note": "Reddito pensionistico lordo complessivo diviso per pensionati."})
+            if contributions and spending:
+                demography_rows.append({**common, "indicatore_id": "copertura_spesa_contributi", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive INPS in rapporto alla spesa pensionistica lorda complessiva. I perimetri non coincidono perfettamente."})
+    for year, insured in sorted(insured_workers_from_reports().items()):
+        common = {"anno": year, "area": "Italia", "classe_eta": "Tutte", "sesso": "Totale", "scenario": "osservato"}
+        demography_rows.append({**common, "indicatore_id": "assicurati_inps", "fonte_id": "inps_assicurati_rapporti", "valore": insured, "unita": "numero", "note": "Lavoratori con almeno un contributo o una giornata retribuita nell'anno, al netto delle sovrapposizioni tra gestioni INPS."})
+        pensioners = annual_index.get((year, "pensionati", "Italia - complessivi"))
+        if pensioners:
+            demography_rows.append({**common, "indicatore_id": "assicurati_inps_per_pensionato", "fonte_id": "inps_assicurati_rapporti", "valore": insured / pensioners, "unita": "rapporto", "note": "Assicurati INPS nell'anno divisi per pensionati complessivi. Gli assicurati sono un flusso annuo, non uno stock medio di occupati."})
+    log.append({"fonte": "eurostat_lfs", "tabella": "tabella_demografia_lavoro", "righe": len(demography_rows), "stato": "ok"})
+
+
 def region_name_for_eurostat(name: str) -> str:
     value = clean_label(name)
     if value.lower().startswith("valle d'aosta"):
@@ -996,6 +1079,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     management_rows: list[dict[str, object]] = []
     territorial_rows: list[dict[str, object]] = []
     comparison_rows: list[dict[str, object]] = []
+    demography_rows: list[dict[str, object]] = []
     distribution_rows: list[dict[str, object]] = []
     profession_rows: list[dict[str, object]] = []
     log_rows: list[dict[str, object]] = []
@@ -1009,6 +1093,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_eurostat_data(territorial_rows, comparison_rows, log_rows)
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
+    build_workers_and_pensioners(annual_rows, demography_rows, log_rows)
     build_pdf_pension_distribution(distribution_rows, log_rows)
 
     by_year_indicator_area = {}
@@ -1029,6 +1114,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
         "tabella_gestioni": frame("tabella_gestioni", management_rows),
         "tabella_territoriale": frame("tabella_territoriale", drop_invalid(territorial_rows)),
         "tabella_confronto_europeo": frame("tabella_confronto_europeo", drop_invalid(comparison_rows)),
+        "tabella_demografia_lavoro": frame("tabella_demografia_lavoro", drop_invalid(demography_rows)),
         "tabella_distribuzione_pensionati": frame("tabella_distribuzione_pensionati", drop_invalid(distribution_rows)),
         "pensionati_per_gestione_professione": frame("pensionati_per_gestione_professione", profession_rows),
     }
