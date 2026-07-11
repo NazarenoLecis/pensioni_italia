@@ -69,6 +69,14 @@ GIAS_COMPONENTS = [
     ("interventi_diversi", "Interventi diversi", r"Per interventi diversi"),
     ("reddito_cittadinanza_inclusione", "Reddito di cittadinanza e inclusione", r"Per reddito e pensione di cittadinanza(?:- ADI - SFL)?"),
 ]
+GIAS_OPEN_DATA_COMPONENTS = {
+    "Oneri pensionistici": "oneri_pensionistici",
+    "Oneri per il mantenimento del salario": "mantenimento_salario",
+    "Oneri per il mantenimento della famiglia": "famiglia",
+    "Oneri per interventi diversi": "interventi_diversi",
+    "Oneri per prestazioni economiche derivanti da riduzioni di oneri previdenziali": "riduzione_oneri_previdenziali",
+    "Oneri per sgravi degli oneri sociali e altre agevolazioni": "sgravi_agevolazioni",
+}
 INPS_INSURED_REPORTS = [
     {
         "name": "xxiii",
@@ -175,6 +183,9 @@ OPEN_DATA_PACKAGES = {
     "conto_economico_2016": 1962,
     "conto_economico_2017": 1973,
     "conto_economico_2018": 2118,
+    "gias_oneri_2015": 1912,
+    "gias_conto_economico_2015_2016": 1168,
+    "gias_conto_economico_2019": 2051,
 }
 
 
@@ -640,11 +651,58 @@ def gias_component_values(page_text: str, pattern: str, expected_values: int) ->
     return [float(value.replace(".", "")) for value in values[:expected_values]]
 
 
+def append_gias_component(
+    transfer_rows: list[dict[str, object]],
+    year: int,
+    component_id: str,
+    value: float,
+    source_id: str,
+    note: str,
+) -> None:
+    label = next((label for identifier, label, _ in GIAS_COMPONENTS if identifier == component_id), component_id.replace("_", " "))
+    transfer_rows.append(
+        {
+            "anno": year,
+            "fonte_id": source_id,
+            "perimetro": "Gestione interventi assistenziali e sostegno alle gestioni previdenziali (GIAS)",
+            "voce_id": f"gias_{component_id}",
+            "voce_nome": label,
+            "categoria_analitica": component_id,
+            "finalita": "componenti_trasferimenti_gias",
+            "gestione_id": "gias",
+            "indicatore_id": "trasferimenti_stato_inps_per_componente",
+            "valore": value,
+            "unita": "euro",
+            "note": note,
+        }
+    )
+
+
 def build_state_transfer_components(transfer_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
     """Estrae le componenti GIAS da PDF ufficiali, quando l'API non le espone."""
+    open_data_added = 0
+    open_data_2015 = read_open_csv("gias_oneri_2015")
+    for _, record in open_data_2015.iterrows():
+        label = clean_label(record.get("Onere"))
+        component_id = GIAS_OPEN_DATA_COMPONENTS.get(label)
+        value = number(record.get("Importo"))
+        year = int_number(record.get("Anno"))
+        if not component_id or value is None or not year:
+            continue
+        append_gias_component(
+            transfer_rows,
+            year,
+            component_id,
+            value * 1_000_000,
+            "inps_open_data_gias",
+            "Open Data INPS ID-5365, importi in milioni convertiti in euro. Serie non continua: nel catalogo Open Data e' stata trovata la tavola analitica 2015, mentre 2016-2019 non espongono la stessa scomposizione in forma tabellare omogenea.",
+        )
+        open_data_added += 1
+
     try:
         import fitz
     except ImportError:
+        log.append({"fonte": "inps_open_data_gias", "tabella": "tabella_trasferimenti_inps", "righe": open_data_added, "stato": "ok" if open_data_added else "dato_non_trovato"})
         log.append({"fonte": "inps_rendiconti_gias", "tabella": "tabella_trasferimenti_inps", "righe": 0, "stato": "PyMuPDF_non_disponibile"})
         return
 
@@ -666,23 +724,15 @@ def build_state_transfer_components(transfer_rows: list[dict[str, object]], log:
                 values[(int(year), component_id)] = parsed[int(column)] * 1_000_000
 
     for (year, component_id), value in sorted(values.items()):
-        label = next(label for identifier, label, _ in GIAS_COMPONENTS if identifier == component_id)
-        transfer_rows.append(
-            {
-                "anno": year,
-                "fonte_id": "inps_rendiconti_gias",
-                "perimetro": "Gestione interventi assistenziali e sostegno alle gestioni previdenziali (GIAS)",
-                "voce_id": f"gias_{component_id}",
-                "voce_nome": label,
-                "categoria_analitica": component_id,
-                "finalita": "componenti_trasferimenti_gias",
-                "gestione_id": "gias",
-                "indicatore_id": "trasferimenti_stato_inps_per_componente",
-                "valore": value,
-                "unita": "euro",
-                "note": "Rendiconto generale INPS, conto economico GIAS, valori in milioni convertiti in euro. La serie mostra esclusivamente gli anni consuntivi pubblicati nelle tavole omogenee.",
-            }
+        append_gias_component(
+            transfer_rows,
+            year,
+            component_id,
+            value,
+            "inps_rendiconti_gias",
+            "Rendiconto generale INPS, conto economico GIAS, valori in milioni convertiti in euro. La serie mostra esclusivamente gli anni consuntivi pubblicati nelle tavole omogenee.",
         )
+    log.append({"fonte": "inps_open_data_gias", "tabella": "tabella_trasferimenti_inps", "righe": open_data_added, "stato": "ok" if open_data_added else "dato_non_trovato"})
     log.append({"fonte": "inps_rendiconti_gias", "tabella": "tabella_trasferimenti_inps", "righe": len(values), "stato": "ok" if values else "tabella_non_trovata"})
 
 

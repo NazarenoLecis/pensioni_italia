@@ -11,7 +11,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Appendici statistiche INPS XXIII-XXV, capitolo 3 | 2022-2025 | Serie aggiornate, gestioni e distribuzione del reddito pensionistico |
 | Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
 | Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
-| Rendiconti generali INPS, conto economico GIAS | 2020-2024 | Trasferimenti dal bilancio dello Stato per componente |
+| Open Data INPS ID-5365 e Rendiconti generali INPS, conto economico GIAS | 2015, 2020-2024 | Trasferimenti dal bilancio dello Stato per componente |
 | API Osservatori statistici INPS 413 e 416 | 2020-2024 | Pensionati, pensioni e importo medio lordo per regione |
 | Rendiconto sociale INPS 2017-2021 | 2017-2020 | Numero medio annuo degli assicurati e pensionati regionali 2017-2019 |
 | Rapporti annuali INPS XXIII e XXIV, lavoratori assicurati | 2014, 2019-2024 | Assicurati INPS, settimane medie lavorate e misura ponderata |
@@ -29,6 +29,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 
 Le serie nazionali 2018-2025 provengono dallo stesso impianto di tavole annuali. I vecchi pacchetti Open Data con perimetri diversi restano nell'inventario e vengono usati solo dove la misura e' coerente e dichiarabile.
 La pipeline interroga le API ufficiali quando l'indicatore e' disponibile. Per i pacchetti Open Data usa `package_show` JSON e scarica la risorsa tabellare ufficiale indicata nel metadato quando il dato non e' esposto come JSON tabellare. Non esegue scraping di pagine HTML.
+Per i trasferimenti GIAS per componente la scomposizione omogenea e' disponibile nel pacchetto Open Data ID-5365 per il 2015 e nei Rendiconti generali per il 2020-2024; i conti economici GIAS 2016-2019 non espongono la stessa tavola analitica e restano documentati ma non fusi nel barchart.
 
 ## Conteggio per ambito
 

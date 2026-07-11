@@ -115,6 +115,78 @@ Per il blocco lavoro la pipeline combina gli occupati 15-64 dell'API Eurostat co
 
 `metadata/mapping_gestioni_professioni_inps.csv` collega gestione o fondo INPS a categoria professionale normalizzata. Il mapping non va interpretato come professione anagrafica osservata direttamente se la fonte misura soltanto la gestione previdenziale.
 
+## Conoscenza operativa su API e fonti
+
+La pipeline segue un ordine preciso: API ufficiali, metadati Open Data, file tabellari ufficiali, PDF ufficiali solo quando la tabella non e' esposta in forma strutturata. Non vengono lette o raschiate pagine HTML.
+
+### INPS Open Data
+
+Endpoint base: `https://serviziweb2.inps.it/odapi`.
+
+Per i pacchetti Open Data si usa `package_show?id=<package_id>`. La risposta contiene le risorse disponibili, i formati e gli URL ufficiali. Quando esiste una risorsa CSV o XLSX, la pipeline scarica quella risorsa indicata dal metadato. Alcuni pacchetti espongono solo CSV/XML, altri anche XLS.
+
+Pacchetti gia' usati nella dashboard:
+
+- `1650`: pensioni per classi d'importo storiche.
+- `1988`: pensionati per regione e classe di reddito pensionistico.
+- `1805`, `1812`: spesa e pensionati regionali storici.
+- `1225`, `1567`: pensioni vigenti gestione dipendenti pubblici.
+- `917`, `1952`, `1962`, `1973`, `2118`: conti economici generali 2013-2018.
+- `1912`: oneri coperti da trasferimenti dal bilancio dello Stato per tipo onere, anno 2015.
+
+Il pacchetto `1912` fornisce la scomposizione GIAS 2015 in oneri pensionistici, mantenimento salario, famiglia, interventi diversi, riduzioni di oneri previdenziali e sgravi. I pacchetti GIAS 2015-2016 e 2019 disponibili nel catalogo sono conti economici netti: utili per audit contabile, ma non sostituiscono la stessa tavola analitica per componenti usata nel barchart.
+
+### API Osservatori statistici INPS
+
+Endpoint base: `https://servizi2.inps.it/servizi/osservatoristatistici/api`.
+
+Chiamate usate:
+
+- `getStrutturaOsservatorio`: schema delle dimensioni e delle misure.
+- `getFiltriOsservatorio`: valori ammessi per le dimensioni.
+- `getDatiOsservatorio`: dati tabellari per righe, colonne e filtri selezionati.
+- `getAllegato`: allegati PDF ufficiali degli osservatori, usato solo quando la tabella richiesta non e' ottenibile via dati strutturati.
+
+Osservatori gia' verificati:
+
+- `413`: beneficiari/pensionati, classi di importo del reddito pensionistico, eta, sesso e territorio.
+- `416`: prestazioni/pensioni, classi di importo della singola pensione, eta, sesso e territorio.
+
+Limite noto: alcune combinazioni granulari con classe d'importo o eta possono restituire "Dati al momento non disponibili" anche se la struttura elenca la dimensione. In questi casi la pipeline usa appendici statistiche XLSX o report ufficiali, mantenendo nota e fonte.
+
+### Appendici statistiche INPS
+
+Le appendici dei Rapporti annuali sono file XLSX ufficiali e hanno un formato stabile per il capitolo 3. Sono usate per:
+
+- Tavola 3.1: pensionati complessivi, pensionati INPS e reddito pensionistico lordo.
+- Tavola 3.3: pensionati INPS per classe di eta e sesso, con importo lordo medio mensile.
+- Tavola 3.4: pensionati INPS per classe di reddito pensionistico e sesso, con importo annuo complessivo e medio.
+- Tavole 3.7/3.9: prestazioni per gestione e ricostruzione delle categorie.
+
+### Bilanci, rendiconti e GIAS
+
+Le appendici di bilancio INPS, tavola 2.4, danno trasferimenti dal bilancio dello Stato e contributi per anni recenti. I conti economici Open Data coprono il totale dei trasferimenti anche per anni precedenti.
+
+La scomposizione GIAS per componenti arriva da:
+
+- Open Data INPS `1912` per il 2015.
+- Rendiconti generali INPS, conto economico GIAS, per 2020-2024.
+
+Non e' stata trovata nel catalogo Open Data una tavola analitica omogenea per il 2016-2019 con le stesse componenti del barchart. I dati esistenti per quegli anni sono conti economici netti o tavole diverse e non vengono fusi per evitare una falsa continuita'.
+
+### Eurostat e OCSE
+
+Eurostat viene letto via JSON-stat e decodificato preservando le dimensioni. Dataset usati:
+
+- `spr_exp_pens`: spesa pensionistica ESSPROS in percentuale del PIL.
+- `nama_10_gdp`: PIL nominale nazionale.
+- `nama_10r_2gdp`: PIL regionale.
+- `demo_r_pjanaggr3`: popolazione regionale.
+- `lfsi_emp_a`: occupati 15-64.
+- `ilc_pnp3`: tasso di sostituzione aggregato per sesso.
+
+OCSE Pensions at a Glance 2025 viene letto da file XLSX ufficiale `stat.link` per il benchmark su pensioni pubbliche di vecchiaia e superstiti in rapporto al PIL.
+
 ## Output
 
 Tutti i file generati vengono salvati in `output`.
