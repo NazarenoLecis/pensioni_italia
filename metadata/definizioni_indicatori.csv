@@ -36,14 +36,18 @@ pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,num
 pensionati_per_classe_reddito_pensionistico,distribuzione,Pensionati per classe di reddito pensionistico,numero,Distribuzione delle persone per reddito pensionistico complessivo.
 pensionati_per_decile_reddito,distribuzione,Pensionati per decile di reddito pensionistico,numero,Distribuzione per decili o percentili quando disponibili.
 spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
+spesa_netta_stimata_per_classe_importo,distribuzione,Spesa netta stimata per classe di importo,euro,Stima ottenuta applicando IRPEF nazionale e detrazione pensione al lordo medio di fascia.
 reddito_pensionistico_totale,distribuzione,Reddito pensionistico totale,euro,Somma dei redditi pensionistici per classe o gruppo.
+reddito_pensionistico_netto_stimato_totale,distribuzione,Reddito pensionistico netto stimato totale,euro,Stima ottenuta applicando IRPEF nazionale e detrazione pensione al reddito pensionistico medio lordo di fascia.
 reddito_pensionistico_medio_mensile,reddito_pensionistico,Reddito pensionistico medio mensile,euro,Media mensile del reddito pensionistico complessivo percepito dal pensionato.
 reddito_pensionistico_medio,distribuzione,Reddito pensionistico medio,euro,Media del reddito pensionistico per persona.
 reddito_pensionistico_mediano,distribuzione,Reddito pensionistico mediano,euro,Mediana del reddito pensionistico per persona.
 reddito_mediano_netto_per_eta,intergenerazionale,Reddito mediano netto per eta,euro o indice,Indicatore per confronto intergenerazionale se fonte coerente disponibile.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
 importo_medio_pensione_mensile,distribuzione,Importo medio mensile della pensione,euro,Indicatore riferito al singolo trattamento pensionistico.
+importo_medio_pensione_netto_stimato_mensile_classe,distribuzione,Importo medio netto stimato della pensione per classe,euro,Stima mensile del netto ottenuta dal lordo medio della classe.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
+reddito_pensionistico_netto_stimato_medio_mensile_classe,distribuzione,Reddito pensionistico medio netto stimato per classe,euro,Stima mensile del netto ottenuta dal reddito pensionistico lordo medio della classe.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
 occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
 occupati_per_pensionato,derivato,Occupati per pensionato,rapporto,Occupati 15-64 anni divisi per pensionati complessivi.

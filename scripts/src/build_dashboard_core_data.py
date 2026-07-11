@@ -378,6 +378,86 @@ def class_bounds(label: object) -> tuple[float | None, float | None]:
     return None, None
 
 
+def pension_irpef_gross_tax(annual_gross_income: float, year: int) -> float | None:
+    if annual_gross_income <= 0:
+        return 0.0
+    if year >= 2024:
+        if annual_gross_income <= 28_000:
+            return annual_gross_income * 0.23
+        if annual_gross_income <= 50_000:
+            return 6_440 + (annual_gross_income - 28_000) * 0.35
+        return 14_140 + (annual_gross_income - 50_000) * 0.43
+    if year >= 2022:
+        if annual_gross_income <= 15_000:
+            return annual_gross_income * 0.23
+        if annual_gross_income <= 28_000:
+            return 3_450 + (annual_gross_income - 15_000) * 0.25
+        if annual_gross_income <= 50_000:
+            return 6_700 + (annual_gross_income - 28_000) * 0.35
+        return 14_400 + (annual_gross_income - 50_000) * 0.43
+    return None
+
+
+def pension_income_detraction(annual_gross_income: float, year: int) -> float | None:
+    if year < 2022:
+        return None
+    if annual_gross_income <= 0 or annual_gross_income > 50_000:
+        return 0.0
+    if annual_gross_income <= 8_500:
+        detraction = 1_955.0
+    elif annual_gross_income <= 28_000:
+        detraction = 700 + 1_255 * (28_000 - annual_gross_income) / 19_500
+    else:
+        detraction = 700 * (50_000 - annual_gross_income) / 22_000
+    if 25_000 < annual_gross_income <= 29_000:
+        detraction += 50
+    return max(detraction, 0.0)
+
+
+def estimated_net_pension_income(annual_gross_income: float, year: int) -> float | None:
+    gross_tax = pension_irpef_gross_tax(annual_gross_income, year)
+    detraction = pension_income_detraction(annual_gross_income, year)
+    if gross_tax is None or detraction is None:
+        return None
+    net_tax = max(gross_tax - detraction, 0.0)
+    return max(annual_gross_income - net_tax, 0.0)
+
+
+def append_estimated_net_distribution(
+    distribution_rows: list[dict[str, object]],
+    common: tuple[int, str, str, str, float | None, float | None, str, str],
+    amount: float,
+    count: float | None,
+    total_indicator: str,
+    average_indicator: str,
+    base_note: str,
+) -> None:
+    if count is None or count <= 0 or amount <= 0:
+        return
+    year = int(common[0])
+    annual_gross_average = amount / count
+    annual_net_average = estimated_net_pension_income(annual_gross_average, year)
+    if annual_net_average is None:
+        return
+    net_total = annual_net_average * count
+    net_note = (
+        f"{base_note} Netto stimato applicando scaglioni IRPEF nazionali e detrazione per redditi da pensione "
+        f"al lordo medio annuo della classe nell'anno {year}; non include addizionali regionali o comunali, "
+        "altri redditi, oneri deducibili o detraibili e carichi familiari."
+    )
+    distribution_rows.append(distribution(*common, total_indicator, net_total, "euro", "elaborazione_repo", net_note))
+    distribution_rows.append(
+        distribution(
+            *common,
+            average_indicator,
+            annual_net_average / 12,
+            "euro",
+            "elaborazione_repo",
+            net_note + " Media annua netta stimata divisa per 12 mesi.",
+        )
+    )
+
+
 def add_annual(
     rows: list[dict[str, object]],
     anno: int,
@@ -1057,6 +1137,15 @@ def append_income_distribution(
                 distribution_rows.append(distribution(*common, "reddito_pensionistico_totale", amount, "euro", source_id, f"Reddito pensionistico annuo complessivo della classe per sesso; tabella 3.4, anno {year}."))
                 if count:
                     distribution_rows.append(distribution(*common, "reddito_pensionistico_medio_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Reddito annuo della classe diviso per pensionati e per 12 mesi."))
+                    append_estimated_net_distribution(
+                        distribution_rows,
+                        common,
+                        amount,
+                        count,
+                        "reddito_pensionistico_netto_stimato_totale",
+                        "reddito_pensionistico_netto_stimato_medio_mensile_classe",
+                        "Reddito pensionistico netto stimato per classe di reddito pensionistico complessivo.",
+                    )
 
 
 def append_age_distribution(
@@ -1365,7 +1454,18 @@ def build_pdf_pension_distribution(distribution_rows: list[dict[str, object]], l
         if amount is not None:
             distribution_rows.append(distribution(2024, "pensioni", "importo_pensione_mensile", label, min_value, max_value, "Totale", "Italia", "spesa_per_classe_importo", amount * 1_000_000, "euro", "inps_casellario_2024", "Importo complessivo annuo della classe; report Casellario 2024, fonte in milioni."))
             if count:
-                distribution_rows.append(distribution(2024, "pensioni", "importo_pensione_mensile", label, min_value, max_value, "Totale", "Italia", "importo_medio_pensione_mensile_classe", amount * 1_000_000 / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
+                annual_amount = amount * 1_000_000
+                common = (2024, "pensioni", "importo_pensione_mensile", label, min_value, max_value, "Totale", "Italia")
+                distribution_rows.append(distribution(*common, "importo_medio_pensione_mensile_classe", annual_amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
+                append_estimated_net_distribution(
+                    distribution_rows,
+                    common,
+                    annual_amount,
+                    count,
+                    "spesa_netta_stimata_per_classe_importo",
+                    "importo_medio_pensione_netto_stimato_mensile_classe",
+                    "Netto stimato sul singolo trattamento medio della classe di importo.",
+                )
     log.append({"fonte": "inps_casellario_2024", "tabella": "tabella_distribuzione_pensionati", "righe": len(table_rows), "stato": "ok" if table_rows else "tabella_non_trovata"})
 
 
@@ -1423,7 +1523,17 @@ def build_historical_distribution_from_open_data(distribution_rows: list[dict[st
             distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "pensioni_per_classe_importo", count, "numero", "elaborazione_repo", "Numero di pensioni ricavato da importo complessivo annuo e importo medio mensile della classe; pacchetto Open Data INPS 1650."))
             distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "spesa_per_classe_importo", amount, "euro", "inps_open_data", "Importo complessivo annuo delle pensioni vigenti per classe di importo; pacchetto Open Data INPS 1650."))
             if count:
-                distribution_rows.append(distribution(int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia", "importo_medio_pensione_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
+                common = (int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia")
+                distribution_rows.append(distribution(*common, "importo_medio_pensione_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
+                append_estimated_net_distribution(
+                    distribution_rows,
+                    common,
+                    amount,
+                    count,
+                    "spesa_netta_stimata_per_classe_importo",
+                    "importo_medio_pensione_netto_stimato_mensile_classe",
+                    "Netto stimato sul singolo trattamento medio della classe di importo.",
+                )
                 added += 3
     log.append({"fonte": "inps_open_data", "tabella": "tabella_distribuzione_pensionati", "righe": added, "stato": "ok"})
 
