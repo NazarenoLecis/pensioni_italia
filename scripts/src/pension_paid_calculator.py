@@ -158,11 +158,12 @@ COEFFICIENT_PERIODS: list[dict[str, object]] = [
 CATEGORY_ROWS: list[dict[str, object]] = [
     {
         "categoria_id": "generica_fpld",
-        "categoria_nome": "Carriera generica FPLD",
+        "categoria_nome": "Dipendente privato - profilo generico",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "Profilo generico",
         "stato": "operativa",
         "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "stima calibrata su RAL inserita o scenario basso/centrale/alto",
         "note": "Categoria pienamente calcolabile per il controfattuale contributivo; non ricostruisce una pensione amministrativa INPS.",
@@ -172,55 +173,60 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Metalmeccanici e industria",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL metalmeccanici industria",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "da integrare con minimi CNEL/ISTAT storici",
-        "note": "Disponibile solo come descrizione metodologica finche' la serie CCNL storica non e' completa.",
+        "note": "Operativa con aliquote FPLD. Il settore non modifica la formula previdenziale; la precisione dipende dalle retribuzioni inserite.",
     },
     {
         "categoria_id": "commercio_terziario",
         "categoria_nome": "Commercio e terziario",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL commercio e terziario",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "da integrare con minimi CNEL/ISTAT storici",
-        "note": "Disabilitata nel frontend finche' la tabella retributiva storica non e' tracciata.",
+        "note": "Operativa con aliquote FPLD. Il settore non modifica la formula previdenziale; la precisione dipende dalle retribuzioni inserite.",
     },
     {
         "categoria_id": "edilizia",
         "categoria_nome": "Edilizia",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL edilizia",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "da integrare",
-        "note": "Categoria non ancora operativa.",
+        "note": "Operativa con aliquote FPLD. Eventuali discontinuita' e periodi non lavorati vanno indicati nella carriera.",
     },
     {
         "categoria_id": "turismo_pubblici_esercizi",
         "categoria_nome": "Turismo e pubblici esercizi",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL turismo/pubblici esercizi",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "da integrare",
-        "note": "Categoria non ancora operativa.",
+        "note": "Operativa con aliquote FPLD. Stagionalita' e mesi lavorati incidono sull'imponibile e vanno indicati.",
     },
     {
         "categoria_id": "trasporti_logistica",
         "categoria_nome": "Trasporti e logistica",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL trasporti/logistica",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "fpld",
         "aliquote": "storiche FPLD",
         "profilo_retributivo": "da integrare",
-        "note": "Categoria non ancora operativa.",
+        "note": "Operativa con aliquote FPLD. La categoria descrive il settore; il calcolo usa le retribuzioni inserite.",
     },
     {
         "categoria_id": "agricoltura",
@@ -229,6 +235,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "ccnl": "Agricoltura",
         "stato": "non_implementata",
         "abilitata_frontend": False,
+        "profilo_aliquota_id": "da_costruire",
         "aliquote": "da costruire",
         "profilo_retributivo": "da integrare",
         "note": "Richiede serie specifica di aliquote e minimali.",
@@ -240,6 +247,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "ccnl": "Comparti pubblici",
         "stato": "sperimentale",
         "abilitata_frontend": False,
+        "profilo_aliquota_id": "gestione_pubblica_da_costruire",
         "aliquote": "da costruire",
         "profilo_retributivo": "RGS Conto annuale da integrare",
         "note": "Non usa silenziosamente aliquote FPLD.",
@@ -251,6 +259,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "ccnl": "",
         "stato": "non_implementata",
         "abilitata_frontend": False,
+        "profilo_aliquota_id": "autonomi_da_costruire",
         "aliquote": "da costruire",
         "profilo_retributivo": "reddito imponibile, minimali e massimali",
         "note": "Serve una serie storica autonoma di aliquote, minimali e redditi imponibili.",
@@ -262,6 +271,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "ccnl": "",
         "stato": "non_implementata",
         "abilitata_frontend": False,
+        "profilo_aliquota_id": "gestione_separata_da_costruire",
         "aliquote": "da costruire",
         "profilo_retributivo": "reddito imponibile e massimali",
         "note": "Non viene presentata come operativa perche' aliquote e massimali cambiano per profilo assicurativo.",
@@ -287,11 +297,13 @@ DEFAULT_SCENARIO = {
     "scenario_id": "scenario_generico_fpld",
     "descrizione": "Esempio FPLD con RAL finale inserita e pensione effettiva lorda.",
     "anno_nascita": 1960,
+    "data_nascita": "1960-01-01",
     "sesso": "T",
     "categoria_id": "generica_fpld",
     "anno_inizio": 1996,
     "anno_fine": 2024,
     "anno_pensione": 2025,
+    "data_pensionamento": "2025-01-01",
     "eta_pensione": 65,
     "mesi_eta_pensione": 0,
     "ral_iniziale": None,
@@ -392,6 +404,19 @@ def normalize_scenario(raw: dict[str, object]) -> dict[str, object]:
         "tasso_inflazione_futura",
     ]:
         scenario[key] = to_float(scenario.get(key), to_float(DEFAULT_SCENARIO.get(key)))
+    birth_date = parse_date(raw.get("data_nascita"))
+    retirement_date = parse_date(raw.get("data_pensionamento"))
+    if birth_date is None:
+        birth_date = date(int(scenario["anno_nascita"]), 1, 1)
+    if retirement_date is None:
+        retirement_date = date(int(scenario["anno_pensione"]), 1, 1)
+    age_years, age_months = age_at_date(birth_date, retirement_date)
+    scenario["data_nascita"] = birth_date.isoformat()
+    scenario["data_pensionamento"] = retirement_date.isoformat()
+    scenario["anno_nascita"] = birth_date.year
+    scenario["anno_pensione"] = retirement_date.year
+    scenario["eta_pensione"] = age_years
+    scenario["mesi_eta_pensione"] = age_months
     return scenario
 
 
@@ -405,8 +430,12 @@ def validate_scenario(scenario: dict[str, object]) -> None:
         raise ValueError("anno_inizio deve essere minore o uguale ad anno_fine")
     if end >= retirement:
         raise ValueError("anno_fine deve precedere anno_pensione")
-    if retirement - birth not in range(age - 2, age + 3):
-        raise ValueError("anno_nascita, anno_pensione ed eta_pensione non sono coerenti")
+    birth_date = parse_date(scenario.get("data_nascita"))
+    retirement_date = parse_date(scenario.get("data_pensionamento"))
+    if birth_date is None or retirement_date is None or retirement_date <= birth_date:
+        raise ValueError("data di nascita e data di pensionamento non sono valide")
+    if retirement - birth not in range(age - 1, age + 2):
+        raise ValueError("data di nascita, pensionamento ed eta non sono coerenti")
     if not (0 < float(scenario["percentuale_lavoro"]) <= 100):
         raise ValueError("percentuale_lavoro deve essere compresa tra 0 e 100")
     if not (0 <= float(scenario["mesi_lavorati_annui"]) <= 12):
@@ -420,6 +449,23 @@ def parse_date(value: object) -> date | None:
     if pd.isna(parsed):
         return None
     return parsed.date()
+
+
+def age_at_date(birth_date: date, reference_date: date) -> tuple[int, int]:
+    total_months = (reference_date.year - birth_date.year) * 12 + reference_date.month - birth_date.month
+    if reference_date.day < birth_date.day:
+        total_months -= 1
+    total_months = max(total_months, 0)
+    return total_months // 12, total_months % 12
+
+
+def category_parameters(category_id: str) -> dict[str, object]:
+    category = next((row for row in CATEGORY_ROWS if row["categoria_id"] == category_id), None)
+    if category is None:
+        raise ValueError(f"Categoria sconosciuta: {category_id}")
+    if not bool(category.get("abilitata_frontend")) or category.get("profilo_aliquota_id") != "fpld":
+        raise ValueError(f"Categoria non ancora calcolabile con una serie storica propria: {category['categoria_nome']}")
+    return category
 
 
 def load_fpld_periods() -> pd.DataFrame:
@@ -604,8 +650,7 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
     scenario = normalize_scenario(scenario)
     validate_scenario(scenario)
     category = str(scenario.get("categoria_id") or "generica_fpld")
-    if category != "generica_fpld":
-        raise ValueError("Solo la categoria generica FPLD e' pienamente operativa in questa versione.")
+    category_info = category_parameters(category)
 
     years = list(range(int(scenario["anno_inizio"]), int(scenario["anno_fine"]) + 1))
     salaries, salary_nature = salary_profile(years, scenario)
@@ -630,8 +675,8 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
                 "scenario_id": scenario["scenario_id"],
                 "anno": year,
                 "categoria": category,
-                "gestione": "FPLD lavoratori dipendenti",
-                "ccnl": "Profilo generico",
+                "gestione": category_info["gestione"],
+                "ccnl": category_info["ccnl"],
                 "livello": scenario.get("livello_finale") or "medio",
                 "retribuzione_stimata": gross_salary,
                 "retribuzione_inserita": gross_salary if salary_nature == "stimato_calibrato_su_ral" else None,
@@ -657,6 +702,8 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
 
 def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[str, object] | None = None) -> pd.DataFrame:
     scenario = normalize_scenario(scenario or DEFAULT_SCENARIO)
+    default_category = str(scenario.get("categoria_id") or "generica_fpld")
+    default_category_info = category_parameters(default_category)
     rows = sorted(annual_rows, key=lambda row: int(row["anno"]))
     seen_years: set[int] = set()
     output: list[dict[str, object]] = []
@@ -666,6 +713,8 @@ def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[s
         if year in seen_years:
             raise ValueError(f"Anno duplicato nella carriera accurata: {year}")
         seen_years.add(year)
+        row_category = str(row.get("categoria") or default_category)
+        row_category_info = category_parameters(row_category)
         taxable = float(to_float(row.get("imponibile_previdenziale"), 0.0) or 0.0)
         if taxable < 0:
             raise ValueError("imponibile_previdenziale non puo' essere negativo")
@@ -678,9 +727,9 @@ def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[s
             {
                 "scenario_id": scenario["scenario_id"],
                 "anno": year,
-                "categoria": row.get("categoria") or "generica_fpld",
-                "gestione": row.get("gestione") or "FPLD lavoratori dipendenti",
-                "ccnl": row.get("ccnl") or "",
+                "categoria": row_category,
+                "gestione": row.get("gestione") or row_category_info.get("gestione") or default_category_info["gestione"],
+                "ccnl": row.get("ccnl") or row_category_info.get("ccnl") or "",
                 "livello": row.get("livello") or "",
                 "retribuzione_stimata": to_float(row.get("retribuzione_stimata")),
                 "retribuzione_inserita": to_float(row.get("retribuzione_inserita"), taxable),
@@ -821,6 +870,90 @@ def survival_probabilities(mortality: pd.DataFrame, sex: str, start_age: int, ma
     return probabilities
 
 
+def remaining_life_expectancy(mortality: pd.DataFrame, sex: str, start_age: int) -> float:
+    sex_map = {"M": "Maschi", "F": "Femmine", "T": "Totale", "Totale": "Totale"}
+    selected = sex_map.get(str(sex), "Totale")
+    rows = mortality[mortality["sesso"].astype(str).eq(selected)].copy()
+    if rows.empty:
+        rows = mortality[mortality["sesso"].astype(str).eq("Totale")].copy()
+    rows["eta"] = pd.to_numeric(rows["eta"], errors="coerce")
+    rows["speranza_vita"] = pd.to_numeric(rows.get("speranza_vita"), errors="coerce")
+    exact = rows[rows["eta"].eq(start_age)]["speranza_vita"].dropna()
+    if not exact.empty:
+        return float(exact.iloc[0])
+    probabilities = survival_probabilities(mortality, sex, start_age, max_horizon=55)
+    return float(sum(probabilities[1:]))
+
+
+def add_months(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    month_lengths = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    return date(year, month, min(value.day, month_lengths[month - 1]))
+
+
+def pension_timeline_metrics(
+    scenario: dict[str, object],
+    accrued: float,
+    actual_annual_at_retirement: float,
+    mortality: pd.DataFrame,
+) -> dict[str, object]:
+    birth_date = parse_date(scenario.get("data_nascita")) or date(int(scenario["anno_nascita"]), 1, 1)
+    retirement_date = parse_date(scenario.get("data_pensionamento")) or date(int(scenario["anno_pensione"]), 1, 1)
+    today = date.today()
+    elapsed_years = max(0.0, (today - retirement_date).days / 365.2425) if retirement_date <= today else 0.0
+    retirement_age_years, retirement_age_months = age_at_date(birth_date, retirement_date)
+    retirement_age = retirement_age_years + retirement_age_months / 12.0
+    life_remaining = remaining_life_expectancy(mortality, str(scenario.get("sesso") or "T"), retirement_age_years)
+    expected_life_age = retirement_age + life_remaining
+    future_rate = (
+        float(scenario.get("tasso_inflazione_futura") or 0.0)
+        if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante"
+        else 0.0
+    )
+    elapsed_months = max(0, int((today - retirement_date).days / 30.436875)) if retirement_date <= today else 0
+    expected_months = max(0, int(round(life_remaining * 12)))
+    cumulative = 0.0
+    received_to_date = 0.0
+    cumulative_at_life = 0.0
+    exhaustion_month: int | None = None
+    max_months = max(expected_months + 240, elapsed_months + 240, 960)
+    for month in range(1, max_months + 1):
+        if month <= elapsed_months:
+            annual_payment = actual_annual_at_retirement * ((1.02) ** (month / 12.0))
+        else:
+            past_base = actual_annual_at_retirement * ((1.02) ** (elapsed_months / 12.0))
+            annual_payment = past_base * ((1 + future_rate) ** ((month - elapsed_months) / 12.0))
+        cumulative += annual_payment / 12.0
+        if month == elapsed_months:
+            received_to_date = cumulative
+        if month == expected_months:
+            cumulative_at_life = cumulative
+        if exhaustion_month is None and cumulative >= accrued:
+            exhaustion_month = month
+    if elapsed_months == 0:
+        received_to_date = 0.0
+    if expected_months == 0:
+        cumulative_at_life = 0.0
+    exhaustion_date = add_months(retirement_date, exhaustion_month) if exhaustion_month is not None else None
+    return {
+        "data_nascita": birth_date.isoformat(),
+        "data_pensionamento": retirement_date.isoformat(),
+        "anni_dal_pensionamento": elapsed_years,
+        "eta_attuale": age_at_date(birth_date, today)[0] + age_at_date(birth_date, today)[1] / 12.0,
+        "speranza_vita_residua_pensionamento": life_remaining,
+        "eta_attesa": expected_life_age,
+        "prestazioni_lorde_stimate_gia_ricevute": received_to_date,
+        "montante_virtuale_residuo_oggi": accrued - received_to_date,
+        "prestazioni_lorde_cumulate_eta_attesa": cumulative_at_life,
+        "saldo_montante_eta_attesa": accrued - cumulative_at_life,
+        "mesi_esaurimento_montante_virtuale": exhaustion_month,
+        "data_esaurimento_montante_virtuale": exhaustion_date.isoformat() if exhaustion_date else None,
+        "eta_esaurimento_montante_virtuale": retirement_age + exhaustion_month / 12.0 if exhaustion_month else None,
+    }
+
+
 def effective_annual_pension(scenario: dict[str, object]) -> tuple[float, str]:
     monthly = float(scenario["pensione_lorda_mensile_effettiva"] or 0.0)
     months = float(scenario["mensilita_pensione"] or 13.0)
@@ -871,8 +1004,16 @@ def calculate_paid_pension_metrics(
     coefficient = transformation_coefficient(int(scenario["anno_pensione"]), age, age_months)
     contributive_pension = accrued * coefficient.coefficiente
     actual_pension, pension_note = effective_annual_pension(scenario)
-    annual_difference = actual_pension - contributive_pension
-    difference_pct = annual_difference / contributive_pension if contributive_pension else 0.0
+    reference_year = int(scenario.get("anno_riferimento_pensione") or scenario["anno_pensione"])
+    years_to_reference = max(0, reference_year - int(scenario["anno_pensione"]))
+    reference_factor = (1.02) ** years_to_reference
+    contributive_pension_reference = contributive_pension * reference_factor
+    actual_pension_reference = float(scenario["pensione_lorda_mensile_effettiva"] or 0.0) * float(scenario["mensilita_pensione"] or 13.0)
+    annual_difference = actual_pension_reference - contributive_pension_reference
+    difference_pct = annual_difference / contributive_pension_reference if contributive_pension_reference else 0.0
+    pension_months = float(scenario.get("mensilita_pensione") or 13.0)
+    monthly_actual = actual_pension_reference / pension_months
+    monthly_contributive = contributive_pension_reference / pension_months
     future_rate = 0.0
     if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante":
         future_rate = float(scenario.get("tasso_inflazione_futura") or 0.02)
@@ -887,6 +1028,9 @@ def calculate_paid_pension_metrics(
         cumulative += payment
         if break_even_age is None and cumulative >= accrued:
             break_even_age = age + horizon
+    timeline = pension_timeline_metrics(scenario, accrued, actual_pension, mortality)
+    if timeline["eta_esaurimento_montante_virtuale"] is not None:
+        break_even_age = float(timeline["eta_esaurimento_montante_virtuale"])
     reliability, improvements = reliability_level(career, scenario)
     return pd.DataFrame(
         [
@@ -895,7 +1039,7 @@ def calculate_paid_pension_metrics(
                 "descrizione": scenario.get("descrizione") or "",
                 "categoria_id": scenario.get("categoria_id") or "generica_fpld",
                 "regime_indicativo": classify_regime(career),
-                "anni_contribuzione": float(len(career)),
+                "anni_contribuzione": float(pd.to_numeric(career["mesi_lavorati"], errors="coerce").fillna(0).sum() / 12.0),
                 "retribuzione_finale": final_salary,
                 "contributi_finanziari_versati": total_financial,
                 "accredito_totale_montante": total_credit,
@@ -904,6 +1048,12 @@ def calculate_paid_pension_metrics(
                 "eta_coefficiente_usata": coefficient.eta_usata,
                 "pensione_contributiva_annua_equivalente": contributive_pension,
                 "pensione_effettiva_annua_lorda": actual_pension,
+                "anno_riferimento_confronto": reference_year,
+                "pensione_contributiva_annua_equivalente_anno_riferimento": contributive_pension_reference,
+                "pensione_effettiva_annua_lorda_anno_riferimento": actual_pension_reference,
+                "pensione_contributiva_mensile_equivalente": monthly_contributive,
+                "pensione_effettiva_mensile_lorda_anno_riferimento": monthly_actual,
+                "differenza_mensile_lorda": monthly_actual - monthly_contributive,
                 "differenza_annua_lorda": annual_difference,
                 "differenza_percentuale_su_contributiva": difference_pct,
                 "valore_atteso_prestazioni_lorde": expected_benefits,
@@ -914,6 +1064,7 @@ def calculate_paid_pension_metrics(
                 "fonte_coefficiente": coefficient.fonte_id,
                 "natura_coefficiente": coefficient.natura_dato,
                 "note": pension_note + " " + coefficient.note,
+                **timeline,
             }
         ]
     )

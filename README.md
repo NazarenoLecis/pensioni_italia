@@ -298,9 +298,11 @@ Il calcolatore in `scripts/src/pension_paid_calculator.py` e' la sola implementa
 
 Il modello costruisce una carriera contributiva anno per anno, calcola i contributi finanziari con aliquota di finanziamento, accredita il montante con aliquota di computo e rivaluta il montante con i tassi annui di capitalizzazione comunicati da ISTAT. La pensione contributiva equivalente e' calcolata applicando il coefficiente di trasformazione per anno ed eta' di pensionamento: non usa piu' la divisione del montante per la speranza di vita residua.
 
-La pensione effettiva e' inserita dall'utente nella dashboard. Il tool confronta quella pensione lorda con un controfattuale interamente contributivo e calcola differenza annua, valore atteso delle prestazioni con tavole di mortalita ISTAT, eta' approssimativa di pareggio e indicatore qualitativo di affidabilita'. Non applica la differenza individuale alla spesa pensionistica nazionale.
+La pensione effettiva e' inserita dall'utente nella dashboard. Il tool confronta quella pensione lorda con un controfattuale interamente contributivo e calcola differenza per rata, valore atteso delle prestazioni con tavole di mortalita ISTAT, tempo trascorso dal pensionamento, prestazioni gia' ricevute stimate e data in cui le pensioni cumulate raggiungono il montante virtuale. Il montante e' una base di calcolo, non un conto individuale che viene materialmente esaurito. Il risultato individuale non viene applicato alla spesa pensionistica nazionale.
 
-Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. La prima categoria pienamente operativa e' `generica_fpld`; le altre categorie sono presenti nei metadata ma restano sperimentali o disabilitate finche' non sono disponibili serie storiche complete di CCNL, aliquote, minimali e massimali.
+La dashboard offre tre modalita': `semplificata`, con pochi input e un profilo retributivo ricostruito; `intermedia`, con valori medi di carriera; `accurata`, con imponibili modificabili anno per anno o caricabili da CSV. Data di nascita e data di pensionamento determinano eta' al pensionamento e tempo gia' trascorso in quiescenza.
+
+Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. I settori metalmeccanica, commercio, edilizia, turismo e trasporti sono operativi come articolazioni del FPLD: il settore descrive la carriera, mentre le aliquote previdenziali restano quelle della gestione. Pubblico impiego, autonomi e Gestione separata restano disabilitati finche' non viene caricata una serie storica specifica di aliquote, minimali e massimali.
 
 Parametri principali:
 

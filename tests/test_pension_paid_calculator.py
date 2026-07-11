@@ -125,6 +125,35 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_simplified_career(scenario(categoria_id="gestione_separata_professionisti"))
 
+    def test_fpld_sector_category_is_operational_and_named(self):
+        career = build_simplified_career(scenario(categoria_id="metalmeccanici_industria"))
+        self.assertEqual(set(career["categoria"]), {"metalmeccanici_industria"})
+        self.assertEqual(set(career["gestione"]), {"FPLD lavoratori dipendenti"})
+
+    def test_dates_drive_retirement_age_and_timeline_metrics(self):
+        dated = scenario(
+            data_nascita="1960-06-15",
+            data_pensionamento="2025-02-15",
+            anno_nascita=1960,
+            anno_pensione=2025,
+            eta_pensione=64,
+            mesi_eta_pensione=8,
+        )
+        career = build_simplified_career(dated)
+        result = calculate_paid_pension_metrics(career, dated, synthetic_mortality_table(2024)).iloc[0]
+        self.assertEqual(result["data_nascita"], "1960-06-15")
+        self.assertEqual(result["data_pensionamento"], "2025-02-15")
+        self.assertGreater(float(result["anni_dal_pensionamento"]), 1)
+        self.assertAlmostEqual(
+            float(result["differenza_mensile_lorda"]),
+            (
+                float(result["pensione_effettiva_annua_lorda_anno_riferimento"])
+                - float(result["pensione_contributiva_annua_equivalente_anno_riferimento"])
+            )
+            / 13,
+            places=6,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
