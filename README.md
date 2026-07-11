@@ -131,6 +131,7 @@ Pacchetti gia' usati nella dashboard:
 - `1988`: pensionati per regione e classe di reddito pensionistico.
 - `1805`, `1812`: spesa e pensionati regionali storici.
 - `1225`, `1567`: pensioni vigenti gestione dipendenti pubblici.
+- `1189`, `1580`: pensioni liquidate gestione dipendenti pubblici per anno di decorrenza, sesso e classe di eta.
 - `917`, `1952`, `1962`, `1973`, `2118`: conti economici generali 2013-2018.
 - `1912`: oneri coperti da trasferimenti dal bilancio dello Stato per tipo onere, anno 2015.
 
@@ -162,6 +163,11 @@ Le appendici dei Rapporti annuali sono file XLSX ufficiali e hanno un formato st
 - Tavola 3.3: pensionati INPS per classe di eta e sesso, con importo lordo medio mensile.
 - Tavola 3.4: pensionati INPS per classe di reddito pensionistico e sesso, con importo annuo complessivo e medio.
 - Tavole 3.7/3.9: prestazioni per gestione e ricostruzione delle categorie.
+- Tavole 3.15a/3.15b: pensioni di vecchiaia, anzianita/anticipate e prepensionamenti vigenti al 31 dicembre 2025 per anno di decorrenza, eta media alla decorrenza e importo lordo medio mensile. Questa misura non va letta come eta media di tutti i nuovi pensionamenti dell'anno.
+
+### Lordo, netto e simulazioni fiscali
+
+Le fonti INPS della dashboard espongono importi lordi. Il netto nelle distribuzioni dei pensionati e' una simulazione applicata al reddito pensionistico lordo medio della fascia, non un dato individuale osservato. La metodologia applica scaglioni IRPEF nazionali, detrazione per redditi da pensione e una stima media delle addizionali regionali e comunali; non sottrae contributi previdenziali, perche' sulle pensioni non sono dovuti, e non considera altri redditi, oneri deducibili o detraibili e carichi familiari.
 
 ### Bilanci, rendiconti e GIAS
 

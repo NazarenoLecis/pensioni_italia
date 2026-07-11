@@ -16,6 +16,10 @@ entrate_contributive_inps,contributi,Entrate contributive INPS,euro,Entrate cont
 pensioni_vigenti,stock_amministrativo,Pensioni vigenti,numero,Trattamenti pensionistici vigenti.
 pensionati,persone,Pensionati,numero,Persone beneficiarie.
 pensioni_liquidate,flussi,Pensioni liquidate,numero,Nuovi trattamenti liquidati.
+pensioni_liquidate_per_classe_eta,flussi,Pensioni liquidate per classe di eta,numero,Distribuzione per eta delle pensioni liquidate quando la fonte consente anno di decorrenza e classe di eta; perimetro da leggere nelle note.
+pensioni_decorrenza_vecchiaia_anticipate_vigenti,flussi,Pensioni per anno di decorrenza,numero,Pensioni di vecchiaia anzianita o anticipate vigenti e classificate per anno di decorrenza.
+eta_media_decorrenza_pensione,flussi,Eta media alla decorrenza,anni,Eta media alla decorrenza delle pensioni considerate dal prospetto; non e' sempre la media di tutti i pensionamenti dell'anno.
+importo_medio_pensione_mensile_decorrenza,flussi,Importo medio mensile alla decorrenza,euro,Importo lordo medio mensile delle pensioni classificate per anno di decorrenza secondo la fonte.
 contributi,contributi,Entrate contributive,euro,Entrate contributive per gestione.
 saldo_gestione,contabilita_inps,Saldo di gestione,euro,Differenza tra entrate e uscite della gestione.
 spesa_pensionistica_pil,derivato,Spesa pensionistica su PIL,percentuale,Specificare numeratore usato.
@@ -36,18 +40,16 @@ pensionati_per_classe_importo,distribuzione,Pensionati per classe di importo,num
 pensionati_per_classe_reddito_pensionistico,distribuzione,Pensionati per classe di reddito pensionistico,numero,Distribuzione delle persone per reddito pensionistico complessivo.
 pensionati_per_decile_reddito,distribuzione,Pensionati per decile di reddito pensionistico,numero,Distribuzione per decili o percentili quando disponibili.
 spesa_per_classe_importo,distribuzione,Spesa per classe di importo,euro,Spesa associata alla classe di importo.
-spesa_netta_stimata_per_classe_importo,distribuzione,Spesa netta stimata per classe di importo,euro,Stima ottenuta applicando IRPEF nazionale e detrazione pensione al lordo medio di fascia.
 reddito_pensionistico_totale,distribuzione,Reddito pensionistico totale,euro,Somma dei redditi pensionistici per classe o gruppo.
-reddito_pensionistico_netto_stimato_totale,distribuzione,Reddito pensionistico netto stimato totale,euro,Stima ottenuta applicando IRPEF nazionale e detrazione pensione al reddito pensionistico medio lordo di fascia.
+reddito_pensionistico_netto_stimato_totale,distribuzione,Totale netto simulato sul valore medio della fascia,euro,Simulazione ottenuta applicando IRPEF nazionale detrazione pensione e addizionali locali medie stimate al reddito pensionistico lordo medio di fascia; non rappresenta il netto effettivo dei pensionati.
 reddito_pensionistico_medio_mensile,reddito_pensionistico,Reddito pensionistico medio mensile,euro,Media mensile del reddito pensionistico complessivo percepito dal pensionato.
 reddito_pensionistico_medio,distribuzione,Reddito pensionistico medio,euro,Media del reddito pensionistico per persona.
 reddito_pensionistico_mediano,distribuzione,Reddito pensionistico mediano,euro,Mediana del reddito pensionistico per persona.
 reddito_mediano_netto_per_eta,intergenerazionale,Reddito mediano netto per eta,euro o indice,Indicatore per confronto intergenerazionale se fonte coerente disponibile.
 importo_medio_pensione,distribuzione,Importo medio della pensione,euro,Indicatore riferito al trattamento.
 importo_medio_pensione_mensile,distribuzione,Importo medio mensile della pensione,euro,Indicatore riferito al singolo trattamento pensionistico.
-importo_medio_pensione_netto_stimato_mensile_classe,distribuzione,Importo medio netto stimato della pensione per classe,euro,Stima mensile del netto ottenuta dal lordo medio della classe.
 importo_medio_pensionato,distribuzione,Reddito pensionistico medio per pensionato,euro,Indicatore riferito alla persona beneficiaria.
-reddito_pensionistico_netto_stimato_medio_mensile_classe,distribuzione,Reddito pensionistico medio netto stimato per classe,euro,Stima mensile del netto ottenuta dal reddito pensionistico lordo medio della classe.
+reddito_pensionistico_netto_stimato_medio_mensile_classe,distribuzione,Simulazione del reddito netto sul valore medio della fascia,euro,Simulazione mensile ottenuta dal reddito pensionistico lordo medio della fascia applicando IRPEF detrazione pensione e addizionali locali medie; non usa microdati individuali e non sottrae contributi previdenziali.
 popolazione_per_eta,demografia,Popolazione per eta,numero,Storico o scenario.
 occupati,lavoro,Occupati,numero,Occupati secondo fonte statistica.
 occupati_per_pensionato,derivato,Occupati per pensionato,rapporto,Occupati 15-64 anni divisi per pensionati complessivi.
@@ -55,7 +57,7 @@ assicurati_inps,lavoro,Assicurati INPS,numero,Lavoratori con almeno un contribut
 assicurati_inps_per_pensionato,derivato,Assicurati INPS per pensionato,rapporto,Assicurati INPS nell'anno divisi per pensionati complessivi; non e' un rapporto tra due stock medi.
 contributi_inps_per_pensionato,derivato,Entrate contributive INPS per pensionato,euro,Indicatore finanziario aggregato; non rappresenta il contributo medio della singola persona.
 spesa_lorda_per_pensionato,derivato,Spesa pensionistica lorda per pensionato,euro,Reddito pensionistico lordo complessivo diviso per pensionati.
-copertura_spesa_contributi,derivato,Copertura della spesa tramite contributi,percentuale,Entrate contributive INPS divise per spesa pensionistica lorda complessiva; perimetri da leggere nelle note.
+rapporto_contributi_reddito_pensionistico_inps,derivato,Entrate contributive INPS su reddito pensionistico INPS,percentuale,Entrate contributive complessive INPS divise per reddito pensionistico lordo dei pensionati che ricevono almeno una prestazione INPS; confronto aggregato.
 tasso_fecondita,demografia,Tasso di fecondita,figli per donna,Tasso di periodo salvo diversa indicazione.
 produttivita_lavoro,lavoro,Produttivita del lavoro,indice o tasso,Definizione da specificare nella fonte.
 salario_reale,lavoro,Salario reale,indice o euro,Definizione da specificare nella fonte.

@@ -8,7 +8,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Dataset / fonte | Copertura usata | Contenuto |
 |---|---:|---|
 | Rapporti annuali INPS XVIII-XXII | 2018-2022 | Pensioni vigenti, pensionati e reddito pensionistico complessivo |
-| Appendici statistiche INPS XXIII-XXV, capitolo 3 | 2022-2025 | Serie aggiornate, gestioni e distribuzione del reddito pensionistico |
+| Appendici statistiche INPS XXIII-XXV, capitolo 3 | 2022-2025 | Serie aggiornate, gestioni, distribuzione del reddito pensionistico e tavole 3.15 su eta alla decorrenza |
 | Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
 | Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
 | Open Data INPS ID-5365 e Rendiconti generali INPS, conto economico GIAS | 2015, 2020-2024 | Trasferimenti dal bilancio dello Stato per componente |
@@ -17,6 +17,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Rapporti annuali INPS XXIII e XXIV, lavoratori assicurati | 2014, 2019-2024 | Assicurati INPS, settimane medie lavorate e misura ponderata |
 | INPS Open Data, pacchetti 1805, 1812, 1988, 1650 | 2012-2017 | Serie territoriali storiche e distribuzioni granulari per classe di importo |
 | INPS Open Data, pacchetti 1225 e 1567 | 2013-2018 | Pensioni vigenti della gestione dipendenti pubblici per chiudere la serie categorie |
+| INPS Open Data, pacchetti 1189 e 1580 | 2013-2017 | Pensioni liquidate della gestione dipendenti pubblici per decorrenza, sesso e classe di eta |
 | Casellario dei pensionati, report 2024 | 2024 | Pensioni per classe di importo e relativa spesa |
 | Eurostat `lfsi_emp_a` | 2010-2025 | Occupati 15-64 anni e rapporto demografico con i pensionati |
 | Eurostat `spr_exp_pens` | 2000-2024 | Spesa pensionistica ESSPROS in percentuale del PIL per paese |
@@ -30,6 +31,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 Le serie nazionali 2018-2025 provengono dallo stesso impianto di tavole annuali. I vecchi pacchetti Open Data con perimetri diversi restano nell'inventario e vengono usati solo dove la misura e' coerente e dichiarabile.
 La pipeline interroga le API ufficiali quando l'indicatore e' disponibile. Per i pacchetti Open Data usa `package_show` JSON e scarica la risorsa tabellare ufficiale indicata nel metadato quando il dato non e' esposto come JSON tabellare. Non esegue scraping di pagine HTML.
 Per i trasferimenti GIAS per componente la scomposizione omogenea e' disponibile nel pacchetto Open Data ID-5365 per il 2015 e nei Rendiconti generali per il 2020-2024; i conti economici GIAS 2016-2019 non espongono la stessa tavola analitica e restano documentati ma non fusi nel barchart.
+Il netto mostrato nelle distribuzioni dei pensionati e' una simulazione: IRPEF nazionale, detrazione pensione e addizionali regionali/comunali medie stimate sul lordo medio della fascia. I pensionati non versano contributi previdenziali sulle pensioni, quindi questi non vengono sottratti.
 
 ## Conteggio per ambito
 
@@ -137,4 +139,5 @@ Per i trasferimenti GIAS per componente la scomposizione omogenea e' disponibile
 - La distribuzione dei trattamenti per classe di importo non misura il reddito pensionistico complessivo della persona.
 - Gli assicurati INPS hanno almeno un contributo o una giornata retribuita nell'anno e sono deduplicati tra gestioni; non sono uno stock medio di occupati equivalenti a tempo pieno. Per avvicinare l'intensita' contributiva vengono esposte anche la misura ponderata per settimane lavorate e, dove disponibile, il numero medio annuo degli assicurati.
 - No-tax area e detrazioni riguardano l'IRPEF netta e non implicano, in generale, l'assenza di contribuzione previdenziale.
+- Il netto pensionistico stimato non sottrae contributi sociali: la pensione e' tassata ai fini IRPEF e addizionali, ma non genera contribuzione previdenziale a carico del pensionato.
 - La serie storica dell'aliquota IVS per dipendenti ordinari e' segnata come fonte da ricostruire, distinta dalle aliquote per autonomi disponibili nei CSV INPS.

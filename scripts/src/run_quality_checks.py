@@ -15,6 +15,7 @@ from utils import check_required_columns, read_csv_optional, save_table, safe_to
 
 STATI_ANALISI_AMMESSI = {"da_implementare", "in_corso", "implementata", "sospesa"}
 PRIORITA_AMMESSE = {"alta", "media", "bassa"}
+STANDARD_IMPORT_BAND_LIMITS = (500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
 
 def registered_outputs() -> set[str]:
@@ -81,7 +82,35 @@ def check_final_table(table_name: str, path: Path, expected_columns: list[str]) 
     if "valore" in table.columns:
         invalid_values = int(safe_to_numeric(table["valore"]).isna().sum())
         rows.append({"tabella": table_name, "controllo": "valore_numerico", "stato": "avviso" if invalid_values else "ok", "dettaglio": invalid_values})
+    if table_name == "tabella_distribuzione_pensionati":
+        rows.extend(check_distribution_band_boundaries(table))
     return rows
+
+
+def check_distribution_band_boundaries(table: pd.DataFrame) -> list[dict[str, object]]:
+    """Segnala classi originali che attraversano i limiti standard usati dal frontend."""
+    required = {"popolazione", "misura_distribuzione", "classe_importo", "classe_importo_min", "classe_importo_max"}
+    if not required <= set(table.columns):
+        return [{"tabella": "tabella_distribuzione_pensionati", "controllo": "fasce_standard", "stato": "avviso", "dettaglio": "colonne fascia mancanti"}]
+
+    bands = table[list(required)].drop_duplicates().copy()
+    bands["min"] = safe_to_numeric(bands["classe_importo_min"])
+    bands["max"] = safe_to_numeric(bands["classe_importo_max"])
+    problematic: list[str] = []
+    for _, row in bands.dropna(subset=["min", "max"]).iterrows():
+        crossed = [str(limit) for limit in STANDARD_IMPORT_BAND_LIMITS if float(row["min"]) < limit < float(row["max"])]
+        if crossed:
+            problematic.append(f"{row['popolazione']} | {row['misura_distribuzione']} | {row['classe_importo']} attraversa {', '.join(crossed)}")
+
+    detail = "; ".join(problematic[:8])
+    if len(problematic) > 8:
+        detail += f"; altri {len(problematic) - 8}"
+    return [{
+        "tabella": "tabella_distribuzione_pensionati",
+        "controllo": "fasce_standard",
+        "stato": "avviso" if problematic else "ok",
+        "dettaglio": detail or "nessuna fascia attraversa i limiti standard",
+    }]
 
 
 def run_quality_checks(log_path: str | Path = LOG_PATHS["quality"]) -> pd.DataFrame:

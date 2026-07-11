@@ -177,6 +177,16 @@ ENTRATE_CONTRIBUTIVE_RENDICONTI = {
     2024: 284_047_000_000,
 }
 
+# Stima prudente delle addizionali regionali e comunali IRPEF complessive.
+# La distribuzione INPS per reddito pensionistico non e' incrociata con comune/regione,
+# quindi si applica una aliquota media nazionale al reddito medio lordo della fascia.
+LOCAL_ADDITIONAL_IRPEF_RATE_ESTIMATE = {
+    2022: 0.020,
+    2023: 0.020,
+    2024: 0.021,
+    2025: 0.021,
+}
+
 OPEN_DATA_PACKAGES = {
     "pensioni_vigenti_storico": 1656,
     "spesa_casellario_storico": 1811,
@@ -196,6 +206,8 @@ OPEN_DATA_PACKAGES = {
     "gias_oneri_2015": 1912,
     "gias_conto_economico_2015_2016": 1168,
     "gias_conto_economico_2019": 2051,
+    "pubblici_liquidate_eta_decorrenza_2014": 1189,
+    "pubblici_liquidate_eta_decorrenza_2017": 1580,
 }
 
 
@@ -420,7 +432,8 @@ def estimated_net_pension_income(annual_gross_income: float, year: int) -> float
     if gross_tax is None or detraction is None:
         return None
     net_tax = max(gross_tax - detraction, 0.0)
-    return max(annual_gross_income - net_tax, 0.0)
+    local_additional_tax = annual_gross_income * LOCAL_ADDITIONAL_IRPEF_RATE_ESTIMATE.get(year, 0.021)
+    return max(annual_gross_income - net_tax - local_additional_tax, 0.0)
 
 
 def append_estimated_net_distribution(
@@ -441,9 +454,10 @@ def append_estimated_net_distribution(
         return
     net_total = annual_net_average * count
     net_note = (
-        f"{base_note} Netto stimato applicando scaglioni IRPEF nazionali e detrazione per redditi da pensione "
-        f"al lordo medio annuo della classe nell'anno {year}; non include addizionali regionali o comunali, "
-        "altri redditi, oneri deducibili o detraibili e carichi familiari."
+        f"{base_note} Simulazione applicando scaglioni IRPEF nazionali, detrazione per redditi da pensione "
+        f"e addizionali regionali/comunali medie stimate al lordo medio annuo della classe nell'anno {year}. "
+        "Non sottrae contributi previdenziali, che sulle pensioni non sono dovuti; non include altri redditi, "
+        "oneri deducibili o detraibili e carichi familiari."
     )
     distribution_rows.append(distribution(*common, total_indicator, net_total, "euro", "elaborazione_repo", net_note))
     distribution_rows.append(
@@ -1144,7 +1158,7 @@ def append_income_distribution(
                         count,
                         "reddito_pensionistico_netto_stimato_totale",
                         "reddito_pensionistico_netto_stimato_medio_mensile_classe",
-                        "Reddito pensionistico netto stimato per classe di reddito pensionistico complessivo.",
+                        "Simulazione del reddito netto sul valore medio della fascia di reddito pensionistico complessivo.",
                     )
 
 
@@ -1457,15 +1471,6 @@ def build_pdf_pension_distribution(distribution_rows: list[dict[str, object]], l
                 annual_amount = amount * 1_000_000
                 common = (2024, "pensioni", "importo_pensione_mensile", label, min_value, max_value, "Totale", "Italia")
                 distribution_rows.append(distribution(*common, "importo_medio_pensione_mensile_classe", annual_amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
-                append_estimated_net_distribution(
-                    distribution_rows,
-                    common,
-                    annual_amount,
-                    count,
-                    "spesa_netta_stimata_per_classe_importo",
-                    "importo_medio_pensione_netto_stimato_mensile_classe",
-                    "Netto stimato sul singolo trattamento medio della classe di importo.",
-                )
     log.append({"fonte": "inps_casellario_2024", "tabella": "tabella_distribuzione_pensionati", "righe": len(table_rows), "stato": "ok" if table_rows else "tabella_non_trovata"})
 
 
@@ -1525,15 +1530,6 @@ def build_historical_distribution_from_open_data(distribution_rows: list[dict[st
             if count:
                 common = (int(record["anno"]), "pensioni", "importo_pensione_mensile", record["classe"], min_value, max_value, "Totale", "Italia")
                 distribution_rows.append(distribution(*common, "importo_medio_pensione_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Importo annuo della classe diviso per numero di prestazioni e per 12 mesi."))
-                append_estimated_net_distribution(
-                    distribution_rows,
-                    common,
-                    amount,
-                    count,
-                    "spesa_netta_stimata_per_classe_importo",
-                    "importo_medio_pensione_netto_stimato_mensile_classe",
-                    "Netto stimato sul singolo trattamento medio della classe di importo.",
-                )
                 added += 3
     log.append({"fonte": "inps_open_data", "tabella": "tabella_distribuzione_pensionati", "righe": added, "stato": "ok"})
 
@@ -1787,7 +1783,7 @@ def build_workers_and_pensioners(
             if spending:
                 demography_rows.append({**common, "indicatore_id": "spesa_lorda_per_pensionato", "fonte_id": "inps_rapporti_annuali", "valore": spending / pensioners, "unita": "euro", "note": "Reddito pensionistico lordo INPS diviso per pensionati INPS."})
             if contributions and spending:
-                demography_rows.append({**common, "indicatore_id": "copertura_spesa_contributi", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive INPS in rapporto al reddito pensionistico lordo INPS. Il rapporto resta aggregato e non attribuisce le entrate alle singole prestazioni."})
+                demography_rows.append({**common, "indicatore_id": "rapporto_contributi_reddito_pensionistico_inps", "fonte_id": "elaborazione_repo", "valore": contributions / spending * 100, "unita": "percentuale", "note": "Entrate contributive complessive INPS in rapporto al reddito pensionistico lordo delle persone che ricevono almeno una prestazione INPS. Confronto aggregato, non saldo previdenziale."})
     for year, insured in sorted(insured_workers_from_reports().items()):
         common = {"anno": year, "area": "Italia", "classe_eta": "Tutte", "sesso": "Totale", "scenario": "osservato"}
         count = insured.get("assicurati")
@@ -1868,6 +1864,148 @@ def distribution(
         "unita": unita,
         "note": note,
     }
+
+
+def flow(
+    anno: int,
+    misura: str,
+    gestione_id: str,
+    sesso: str,
+    classe_eta: str,
+    indicatore: str,
+    fonte: str,
+    valore: object,
+    unita: str,
+    note: str,
+) -> dict[str, object]:
+    return {
+        "anno": anno,
+        "misura": misura,
+        "gestione_id": gestione_id,
+        "sesso": sesso,
+        "classe_eta": clean_label(classe_eta),
+        "indicatore_id": indicatore,
+        "fonte_id": fonte,
+        "valore": number(valore),
+        "unita": unita,
+        "note": note,
+    }
+
+
+def find_column(table: pd.DataFrame, *needles: str) -> str | None:
+    wanted = [normalize_id(item) for item in needles]
+    for column in table.columns:
+        normalized = normalize_id(column)
+        if all(part in normalized for part in wanted):
+            return str(column)
+    return None
+
+
+def build_liquidation_age_distribution_from_open_data(flow_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    datasets = [
+        ("pubblici_liquidate_eta_decorrenza_2014", "inps_open_data_1189"),
+        ("pubblici_liquidate_eta_decorrenza_2017", "inps_open_data_1580"),
+    ]
+    added = 0
+    for dataset_name, source_id in datasets:
+        table = read_open_csv(dataset_name)
+        year_column = find_column(table, "anno", "decorrenza")
+        sex_column = find_column(table, "sesso")
+        age_column = find_column(table, "classe", "eta")
+        count_column = find_column(table, "numero", "pension")
+        if not (year_column and sex_column and age_column and count_column):
+            log.append({"fonte": source_id, "tabella": "tabella_flussi_pensionamento", "righe": 0, "stato": "colonne_non_trovate"})
+            continue
+        grouped: dict[tuple[int, str, str], float] = {}
+        for _, record in table.iterrows():
+            decorrenza = int_number(record.get(year_column))
+            count = number(record.get(count_column))
+            age_class = clean_label(record.get(age_column))
+            sex = clean_label(record.get(sex_column))
+            if decorrenza is None or count is None or sex.lower() == "totale" or age_class.lower().startswith("non ripart"):
+                continue
+            key = (decorrenza, sex, age_class)
+            grouped[key] = grouped.get(key, 0.0) + count
+        for (decorrenza, sex, age_class), count in sorted(grouped.items()):
+            flow_rows.append(
+                flow(
+                    decorrenza,
+                    "distribuzione_eta_pensioni_liquidate_pubblici",
+                    "gestione_dipendenti_pubblici",
+                    sex,
+                    age_class,
+                    "pensioni_liquidate_per_classe_eta",
+                    source_id,
+                    count,
+                    "numero",
+                    "Pensioni liquidate della Gestione dipendenti pubblici per anno di decorrenza, sesso e classe di eta. Fonte Open Data INPS; non e' il totale sistema.",
+                )
+            )
+            added += 1
+    log.append({"fonte": "inps_open_data_flussi_eta", "tabella": "tabella_flussi_pensionamento", "righe": added, "stato": "ok" if added else "dato_non_disponibile"})
+
+
+def append_retirement_age_from_315_sheet(
+    xl: pd.ExcelFile,
+    sheet_name: str,
+    source_id: str,
+    gestione_id: str,
+    gestione_label: str,
+    flow_rows: list[dict[str, object]],
+) -> int:
+    sheet = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+    added = 0
+    sex_blocks = [
+        ("Maschi", 2, 3, 4),
+        ("Femmine", 5, 6, 7),
+        ("Totale", 8, 9, 10),
+    ]
+    for _, record in sheet.iterrows():
+        values = record.tolist()
+        year = int_number(values[1] if len(values) > 1 else None) or int_number(values[0] if values else None)
+        if year is None or year < 1990:
+            continue
+        for sex, count_idx, age_idx, amount_idx in sex_blocks:
+            count = number(values[count_idx] if len(values) > count_idx else None)
+            age = number(values[age_idx] if len(values) > age_idx else None)
+            amount = number(values[amount_idx] if len(values) > amount_idx else None)
+            note = (
+                f"Pensioni di vecchiaia, anzianita/anticipate e prepensionamenti {gestione_label}, "
+                "vigenti al 31.12.2025 e classificate per anno di decorrenza; tavola INPS 3.15. "
+                "La misura e' una media osservata sulle pensioni vigenti, non una distribuzione completa dei nuovi pensionamenti dell'anno."
+            )
+            if count is not None:
+                flow_rows.append(flow(year, "eta_decorrenza_pensioni_vigenti", gestione_id, sex, "Tutte", "pensioni_decorrenza_vecchiaia_anticipate_vigenti", source_id, count, "numero", note))
+                added += 1
+            if age is not None:
+                flow_rows.append(flow(year, "eta_decorrenza_pensioni_vigenti", gestione_id, sex, "Tutte", "eta_media_decorrenza_pensione", source_id, age, "anni", note))
+                added += 1
+            if amount is not None:
+                flow_rows.append(flow(year, "eta_decorrenza_pensioni_vigenti", gestione_id, sex, "Tutte", "importo_medio_pensione_mensile_decorrenza", source_id, amount, "euro", note))
+                added += 1
+    return added
+
+
+def build_retirement_age_from_appendix(flow_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    xl = read_appendix()
+    added = 0
+    added += append_retirement_age_from_315_sheet(
+        xl,
+        "3.15a",
+        "inps_appendice_xxv",
+        "fondo_pensioni_lavoratori_dipendenti",
+        "Fondo pensioni lavoratori dipendenti",
+        flow_rows,
+    )
+    added += append_retirement_age_from_315_sheet(
+        xl,
+        "3.15b",
+        "inps_appendice_xxv",
+        "gestioni_lavoratori_autonomi",
+        "Gestioni lavoratori autonomi",
+        flow_rows,
+    )
+    log.append({"fonte": "inps_appendice_xxv", "tabella": "tabella_flussi_pensionamento", "righe": added, "stato": "ok" if added else "dato_non_disponibile"})
 
 
 def clean_label(value: object) -> str:
@@ -1989,6 +2127,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     comparison_rows: list[dict[str, object]] = []
     demography_rows: list[dict[str, object]] = []
     distribution_rows: list[dict[str, object]] = []
+    flow_rows: list[dict[str, object]] = []
     profession_rows: list[dict[str, object]] = []
     log_rows: list[dict[str, object]] = []
 
@@ -2013,6 +2152,8 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_workers_and_pensioners(annual_rows, demography_rows, log_rows)
     build_historical_distribution_from_open_data(distribution_rows, log_rows)
     build_pdf_pension_distribution(distribution_rows, log_rows)
+    build_retirement_age_from_appendix(flow_rows, log_rows)
+    build_liquidation_age_distribution_from_open_data(flow_rows, log_rows)
 
     by_year_indicator_area = {}
     for row in annual_rows:
@@ -2032,6 +2173,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
         "tabella_gestioni": frame("tabella_gestioni", management_rows),
         "tabella_territoriale": frame("tabella_territoriale", drop_invalid(territorial_rows)),
         "tabella_confronto_europeo": frame("tabella_confronto_europeo", drop_invalid(comparison_rows)),
+        "tabella_flussi_pensionamento": frame("tabella_flussi_pensionamento", drop_invalid(flow_rows)),
         "tabella_demografia_lavoro": frame("tabella_demografia_lavoro", drop_invalid(demography_rows)),
         "tabella_distribuzione_pensionati": frame("tabella_distribuzione_pensionati", drop_invalid(distribution_rows)),
         "pensionati_per_gestione_professione": frame("pensionati_per_gestione_professione", profession_rows),
