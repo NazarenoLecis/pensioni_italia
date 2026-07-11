@@ -1927,15 +1927,8 @@ def drop_invalid(rows: Iterable[dict[str, object]]) -> list[dict[str, object]]:
 
 
 def interpolate_management_gap(management_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
-    """Colma il tratto 2018-2021 delle categorie aggregate quando manca la tavola omogenea."""
+    """Colma il tratto 2018-2021 dei soli conteggi quando manca la tavola omogenea."""
     counts: dict[tuple[int, str], float] = {}
-    weighted_amounts: dict[tuple[int, str], float] = {}
-    weighted_counts: dict[tuple[int, str], float] = {}
-    count_by_management = {
-        (int(row["anno"]), str(row["gestione_id"])): number(row["valore"])
-        for row in management_rows
-        if row.get("indicatore_id") == "pensioni_vigenti"
-    }
     for row in management_rows:
         year = int(row["anno"])
         group = str(row.get("gruppo_gestione") or "altre_gestioni")
@@ -1945,14 +1938,9 @@ def interpolate_management_gap(management_rows: list[dict[str, object]], log: li
         key = (year, group)
         if row.get("indicatore_id") == "pensioni_vigenti":
             counts[key] = counts.get(key, 0) + value
-        elif row.get("indicatore_id") == "importo_medio_pensione":
-            weight = count_by_management.get((year, str(row["gestione_id"])))
-            if weight:
-                weighted_amounts[key] = weighted_amounts.get(key, 0) + value * weight
-                weighted_counts[key] = weighted_counts.get(key, 0) + weight
 
     added = 0
-    groups = sorted({group for _, group in counts} | {group for _, group in weighted_amounts})
+    groups = sorted({group for _, group in counts})
     for group in groups:
         start_count = counts.get((2017, group))
         end_count = counts.get((2022, group))
@@ -1972,32 +1960,6 @@ def interpolate_management_gap(management_rows: list[dict[str, object]], log: li
                         "fonte_id": "elaborazione_repo",
                         "valore": value,
                         "unita": "numero",
-                        "note": "Interpolazione lineare tra l'ultimo dato Open Data 2017 e la prima appendice omogenea 2022; usata solo per evitare il buco 2018-2021 nella vista aggregata per categoria.",
-                    }
-                )
-                added += 1
-        start_avg = weighted_amounts.get((2017, group))
-        start_weight = weighted_counts.get((2017, group))
-        end_avg = weighted_amounts.get((2022, group))
-        end_weight = weighted_counts.get((2022, group))
-        if start_avg is not None and start_weight and end_avg is not None and end_weight:
-            start_value = start_avg / start_weight
-            end_value = end_avg / end_weight
-            for year in range(2018, 2022):
-                if weighted_amounts.get((year, group)) is not None and weighted_counts.get((year, group)):
-                    continue
-                share = (year - 2017) / 5
-                value = start_value + (end_value - start_value) * share
-                management_rows.append(
-                    {
-                        "anno": year,
-                        "gestione_id": f"interpolazione_{group}",
-                        "gestione_nome": f"{label_interpolated_group(group)} (interpolazione)",
-                        "gruppo_gestione": group,
-                        "indicatore_id": "importo_medio_pensione",
-                        "fonte_id": "elaborazione_repo",
-                        "valore": value,
-                        "unita": "euro",
                         "note": "Interpolazione lineare tra l'ultimo dato Open Data 2017 e la prima appendice omogenea 2022; usata solo per evitare il buco 2018-2021 nella vista aggregata per categoria.",
                     }
                 )
