@@ -19,6 +19,7 @@ oecd_pensions_at_a_glance_2025,OCSE,Pensions at a Glance 2025 - Table 8.2,https:
 istat,ISTAT,ISTAT SDMX,https://esploradati.istat.it/,demografia lavoro territorio,variabile,,Demografia e statistiche ufficiali.
 eurostat,Eurostat,Eurostat API,https://ec.europa.eu/eurostat/databrowser/,confronti europei,variabile,,ESSPROS e dati armonizzati europei.
 eurostat_lfs,Eurostat,EU Labour Force Survey,https://ec.europa.eu/eurostat/databrowser/view/lfsi_emp_a/default/table,occupati per eta e sesso,annuale,,API Eurostat dataset lfsi_emp_a; dashboard: occupati 15-64 anni in Italia.
+eurostat_ilc_pnp3,Eurostat,Aggregate replacement ratio,https://ec.europa.eu/eurostat/databrowser/view/ilc_pnp3/default/table,tasso di sostituzione aggregato,annuale,,API Eurostat dataset ilc_pnp3; rapporto aggregato annuale per sesso e paese.
 eurostat_inps,Eurostat e INPS,Indicatori lavoratori pensionati,,occupati e pensionati,annuale,,Rapporti derivati tra occupati EU-LFS e pensionati INPS.
 inps_assicurati_rapporti,INPS,Rapporti annuali - lavoratori assicurati,https://www.inps.it/it/it/dati-e-bilanci/rapporti-annuali.html,lavoratori assicurati e contribuzione,annuale,,PDF ufficiali XXIII e XXIV; serie degli assicurati al netto delle sovrapposizioni tra gestioni.
 eurostat_esspros,Eurostat,ESSPROS - Pension expenditure,https://ec.europa.eu/eurostat/databrowser/view/spr_exp_pens/default/table,spesa pensionistica armonizzata in rapporto al PIL,annuale,,Dataset spr_exp_pens usato per il confronto storico tra Italia UE27 e paesi europei.

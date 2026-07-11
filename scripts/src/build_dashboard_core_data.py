@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import product
 from io import BytesIO
 import json
 from pathlib import Path
@@ -107,6 +108,10 @@ EUROSTAT_NATIONAL_GDP_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nama_10_gdp"
     "?lang=en&unit=CP_MEUR&na_item=B1GQ&geo=IT&sinceTimePeriod=2010"
 )
+EUROSTAT_AGGREGATE_REPLACEMENT_URL = (
+    "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/ilc_pnp3"
+    "?lang=en&unit=PC&sinceTimePeriod=2010"
+)
 EUROSTAT_EMPLOYMENT_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/lfsi_emp_a"
     "?lang=en&indic_em=EMP_LFS&unit=THS_PER&sex=T&age=Y15-64&geo=IT&sinceTimePeriod=2010"
@@ -163,6 +168,8 @@ OPEN_DATA_PACKAGES = {
     "pensionati_regioni_classi_importo_storico": 1988,
     "pensioni_classi_importo_storico": 1650,
     "pensionati_reddito_classi_2014": 1182,
+    "pubblici_vigenti_area_sesso_2013_2015": 1225,
+    "pubblici_vigenti_area_sesso_2014_2018": 1567,
     "conto_economico_2013_2014": 917,
     "conto_economico_2015": 1952,
     "conto_economico_2016": 1962,
@@ -236,6 +243,29 @@ def jsonstat_geo_time(payload: dict[str, object]) -> dict[tuple[str, int], float
             if parsed is not None:
                 result[(str(geo), int(year))] = parsed
     return result
+
+
+def jsonstat_records(payload: dict[str, object]) -> Iterable[dict[str, object]]:
+    """Decodifica una risposta JSON-stat Eurostat preservando tutte le dimensioni."""
+    dimensions = payload["dimension"]
+    ids = list(payload["id"])
+    sizes = [int(size) for size in payload["size"]]
+    values = payload.get("value", {})
+    categories: list[list[tuple[str, int]]] = []
+    for dim_id in ids:
+        category_index = dimensions[dim_id]["category"]["index"]
+        categories.append(sorted(((str(label), int(position)) for label, position in category_index.items()), key=lambda item: item[1]))
+    for combination in product(*categories):
+        flat_index = 0
+        record: dict[str, object] = {}
+        for (label, position), dim_id, size in zip(combination, ids, sizes):
+            flat_index = flat_index * size + position
+            record[dim_id] = label
+        value = values.get(str(flat_index), values.get(flat_index))
+        parsed = number(value)
+        if parsed is not None:
+            record["value"] = parsed
+            yield record
 
 
 def open_data_resource_url(name: str, preferred_format: str = "csv") -> str:
@@ -437,6 +467,49 @@ def build_management_history_from_open_data(management_rows: list[dict[str, obje
             weighted = (group["Numero pensioni"] * group["Importo medio mensile"]).sum() / count
             management_rows.append({"anno": int(year), "gestione_id": normalize_id(group_name), "gestione_nome": group_name, "gruppo_gestione": classify_professional_group(group_name), "indicatore_id": "importo_medio_pensione", "fonte_id": "inps_open_data", "valore": weighted, "unita": "euro", "note": "Importo medio mensile ponderato per gestione; Open Data INPS ID-5080."})
     log.append({"fonte": "inps_open_data", "tabella": "tabella_gestioni", "righe": len(management_rows), "stato": "ok"})
+
+
+def build_public_employee_history_from_open_data(management_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Aggiunge la gestione dipendenti pubblici storica dai dataset Open Data dedicati."""
+    sources = [
+        ("pubblici_vigenti_area_sesso_2013_2015", "inps_open_data", {2013}),
+        ("pubblici_vigenti_area_sesso_2014_2018", "inps_open_data", {2014, 2015, 2016, 2017, 2018}),
+    ]
+    added = 0
+    for dataset_name, source_id, allowed_years in sources:
+        table = read_open_csv(dataset_name)
+        table.columns = [clean_label(column) for column in table.columns]
+        count_column = next((column for column in table.columns if column.lower() == "numero pensioni"), None)
+        average_column = next((column for column in table.columns if column.lower() == "importo medio mensile"), None)
+        sex_column = next((column for column in table.columns if column.lower() == "sesso"), None)
+        area_column = next((column for column in table.columns if "area della sede" in column.lower()), None)
+        if not count_column or not average_column:
+            continue
+        table[count_column] = table[count_column].map(number)
+        table[average_column] = table[average_column].map(number)
+        if area_column and table[area_column].astype(str).str.lower().str.strip().eq("totale").any():
+            table = table[table[area_column].astype(str).str.lower().str.strip().eq("totale")]
+        if sex_column and table[sex_column].astype(str).str.lower().str.strip().eq("totale").any():
+            table = table[table[sex_column].astype(str).str.lower().str.strip().eq("totale")]
+        for year, group in table.groupby("Anno", dropna=True):
+            year = int(year)
+            if year not in allowed_years:
+                continue
+            count = group[count_column].sum()
+            if not count:
+                continue
+            weighted = (group[count_column] * group[average_column]).sum() / count
+            common = {
+                "anno": year,
+                "gestione_id": "gestione_dipendenti_pubblici_open_data",
+                "gestione_nome": "Gestione Dipendenti Pubblici",
+                "gruppo_gestione": "ex_dipendenti_pubblici",
+                "fonte_id": source_id,
+            }
+            management_rows.append({**common, "indicatore_id": "pensioni_vigenti", "valore": count, "unita": "numero", "note": f"Gestione dipendenti pubblici, pensioni vigenti aggregate da Open Data INPS {OPEN_DATA_PACKAGES[dataset_name]}."})
+            management_rows.append({**common, "indicatore_id": "importo_medio_pensione", "valore": weighted, "unita": "euro", "note": f"Importo medio mensile ponderato della gestione dipendenti pubblici; Open Data INPS {OPEN_DATA_PACKAGES[dataset_name]}."})
+            added += 2
+    log.append({"fonte": "inps_open_data_pubblici", "tabella": "tabella_gestioni", "righe": added, "stato": "ok" if added else "dato_non_disponibile"})
 
 
 def build_contributions(rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
@@ -1191,6 +1264,37 @@ def build_eurostat_data(
     log.append({"fonte": "eurostat", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
 
 
+def build_eurostat_replacement_rates(comparison_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Aggiunge il tasso di sostituzione aggregato annuale Eurostat."""
+    cache = RAW_DATA_DIR / "eurostat"
+    payload = request_json(EUROSTAT_AGGREGATE_REPLACEMENT_URL, cache / "ilc_pnp3_aggregate_replacement.json")
+    sex_labels = {"T": "Totale", "M": "Maschi", "F": "Femmine"}
+    added = 0
+    for record in jsonstat_records(payload):
+        country = str(record.get("geo"))
+        sex = str(record.get("sex"))
+        if country not in EU_COUNTRIES or sex not in sex_labels:
+            continue
+        value = number(record.get("value"))
+        year = int(record["time"])
+        if value is None:
+            continue
+        comparison_rows.append(
+            {
+                "anno": year,
+                "paese": EU_COUNTRIES[country],
+                "indicatore_id": "tasso_sostituzione_aggregato_eurostat",
+                "definizione": f"aggregato|{sex}",
+                "fonte_id": "eurostat_ilc_pnp3",
+                "valore": value * 100 if value <= 1 else value,
+                "unita": "percentuale",
+                "note": "Eurostat ilc_pnp3: rapporto aggregato tra pensione individuale mediana lorda delle persone 65-74 e reddito individuale mediano lordo da lavoro delle persone 50-59, esclusi altri benefici sociali.",
+            }
+        )
+        added += 1
+    log.append({"fonte": "eurostat_ilc_pnp3", "tabella": "tabella_confronto_europeo", "righe": added, "stato": "ok" if added else "dato_non_disponibile"})
+
+
 def build_pension_income_gdp_ratio(
     annual_rows: list[dict[str, object]],
     comparison_rows: list[dict[str, object]],
@@ -1422,6 +1526,8 @@ def classify_professional_group(gestione: object) -> str:
         return "ex_dipendenti_pubblici"
     if "lavoratori dipendenti" in text:
         return "ex_dipendenti_privati"
+    if "lavoratori autonomi" in text:
+        return "ex_partite_iva_parasubordinati"
     if "artigiani" in text or "commercianti" in text:
         return "ex_imprenditori_autonomi"
     if "coltivatori" in text or "mezzadri" in text:
@@ -1445,6 +1551,98 @@ def drop_invalid(rows: Iterable[dict[str, object]]) -> list[dict[str, object]]:
     return result
 
 
+def interpolate_management_gap(management_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
+    """Colma il tratto 2018-2021 delle categorie aggregate quando manca la tavola omogenea."""
+    counts: dict[tuple[int, str], float] = {}
+    weighted_amounts: dict[tuple[int, str], float] = {}
+    weighted_counts: dict[tuple[int, str], float] = {}
+    count_by_management = {
+        (int(row["anno"]), str(row["gestione_id"])): number(row["valore"])
+        for row in management_rows
+        if row.get("indicatore_id") == "pensioni_vigenti"
+    }
+    for row in management_rows:
+        year = int(row["anno"])
+        group = str(row.get("gruppo_gestione") or "altre_gestioni")
+        value = number(row.get("valore"))
+        if value is None:
+            continue
+        key = (year, group)
+        if row.get("indicatore_id") == "pensioni_vigenti":
+            counts[key] = counts.get(key, 0) + value
+        elif row.get("indicatore_id") == "importo_medio_pensione":
+            weight = count_by_management.get((year, str(row["gestione_id"])))
+            if weight:
+                weighted_amounts[key] = weighted_amounts.get(key, 0) + value * weight
+                weighted_counts[key] = weighted_counts.get(key, 0) + weight
+
+    added = 0
+    groups = sorted({group for _, group in counts} | {group for _, group in weighted_amounts})
+    for group in groups:
+        start_count = counts.get((2017, group))
+        end_count = counts.get((2022, group))
+        if start_count is not None and end_count is not None:
+            for year in range(2018, 2022):
+                if counts.get((year, group)) is not None:
+                    continue
+                share = (year - 2017) / 5
+                value = start_count + (end_count - start_count) * share
+                management_rows.append(
+                    {
+                        "anno": year,
+                        "gestione_id": f"interpolazione_{group}",
+                        "gestione_nome": f"{label_interpolated_group(group)} (interpolazione)",
+                        "gruppo_gestione": group,
+                        "indicatore_id": "pensioni_vigenti",
+                        "fonte_id": "elaborazione_repo",
+                        "valore": value,
+                        "unita": "numero",
+                        "note": "Interpolazione lineare tra l'ultimo dato Open Data 2017 e la prima appendice omogenea 2022; usata solo per evitare il buco 2018-2021 nella vista aggregata per categoria.",
+                    }
+                )
+                added += 1
+        start_avg = weighted_amounts.get((2017, group))
+        start_weight = weighted_counts.get((2017, group))
+        end_avg = weighted_amounts.get((2022, group))
+        end_weight = weighted_counts.get((2022, group))
+        if start_avg is not None and start_weight and end_avg is not None and end_weight:
+            start_value = start_avg / start_weight
+            end_value = end_avg / end_weight
+            for year in range(2018, 2022):
+                if weighted_amounts.get((year, group)) is not None and weighted_counts.get((year, group)):
+                    continue
+                share = (year - 2017) / 5
+                value = start_value + (end_value - start_value) * share
+                management_rows.append(
+                    {
+                        "anno": year,
+                        "gestione_id": f"interpolazione_{group}",
+                        "gestione_nome": f"{label_interpolated_group(group)} (interpolazione)",
+                        "gruppo_gestione": group,
+                        "indicatore_id": "importo_medio_pensione",
+                        "fonte_id": "elaborazione_repo",
+                        "valore": value,
+                        "unita": "euro",
+                        "note": "Interpolazione lineare tra l'ultimo dato Open Data 2017 e la prima appendice omogenea 2022; usata solo per evitare il buco 2018-2021 nella vista aggregata per categoria.",
+                    }
+                )
+                added += 1
+    log.append({"fonte": "elaborazione_repo", "tabella": "tabella_gestioni", "righe": added, "stato": "interpolazione_2018_2021"})
+
+
+def label_interpolated_group(group: str) -> str:
+    labels = {
+        "altre_gestioni": "Altre gestioni",
+        "ex_dipendenti_privati": "Ex dipendenti privati",
+        "ex_dipendenti_pubblici": "Ex dipendenti pubblici",
+        "ex_imprenditori_autonomi": "Artigiani e commercianti",
+        "ex_autonomi_agricoli": "Autonomi agricoli",
+        "ex_partite_iva_parasubordinati": "Autonomi e parasubordinati",
+        "prestazioni_assistenziali": "Prestazioni assistenziali",
+    }
+    return labels.get(group, group.replace("_", " "))
+
+
 def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]) -> pd.DataFrame:
     prepare_directories()
     annual_rows: list[dict[str, object]] = []
@@ -1459,6 +1657,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
 
     build_annual_from_open_data(annual_rows, log_rows)
     build_management_history_from_open_data(management_rows, log_rows)
+    build_public_employee_history_from_open_data(management_rows, log_rows)
     build_contributions(annual_rows, log_rows)
     build_consistent_annual_series(annual_rows, log_rows)
     build_state_transfers(annual_rows, transfer_rows, log_rows)
@@ -1467,10 +1666,12 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_region_bridge_2017_2019(territorial_rows, log_rows)
     build_current_regions_from_api(territorial_rows, log_rows)
     build_eurostat_data(territorial_rows, comparison_rows, log_rows)
+    build_eurostat_replacement_rates(comparison_rows, log_rows)
     build_oecd_pension_spending(comparison_rows, log_rows)
     build_replacement_rate_projections(comparison_rows, log_rows)
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
+    interpolate_management_gap(management_rows, log_rows)
     build_pension_income_gdp_ratio(annual_rows, comparison_rows, log_rows)
     build_workers_and_pensioners(annual_rows, demography_rows, log_rows)
     build_historical_distribution_from_open_data(distribution_rows, log_rows)
