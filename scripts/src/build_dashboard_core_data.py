@@ -845,22 +845,90 @@ def append_income_distribution(
     distribution_rows: list[dict[str, object]],
 ) -> None:
     sheet = pd.read_excel(xl, sheet_name="3.4", header=None)
+    sex_columns = [
+        ("Maschi", 2, 5),
+        ("Femmine", 6, 9),
+        ("Totale", 10, 13),
+    ]
     for _, record in sheet.iterrows():
         values = record.tolist()
         label = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
         if not label or label in {"Classe di importo mensile***", "TOTALE"} or label.startswith("Tabella") or label.startswith("*"):
             continue
-        count = number(values[10] if len(values) > 10 else None)
-        amount_million = number(values[13] if len(values) > 13 else None)
         minimum, maximum = class_bounds(label)
-        common = (year, "pensionati_inps", "reddito_pensionistico_mensile", label, minimum, maximum, "Totale", "Italia - INPS")
-        if count is not None:
-            distribution_rows.append(distribution(*common, "pensionati_per_classe_reddito_pensionistico", count, "numero", source_id, f"Pensionati per reddito pensionistico mensile complessivo; tabella 3.4, anno {year}."))
-        if amount_million is not None:
-            amount = amount_million * 1_000_000
-            distribution_rows.append(distribution(*common, "reddito_pensionistico_totale", amount, "euro", source_id, f"Reddito pensionistico annuo complessivo della classe; tabella 3.4, anno {year}."))
-            if count:
-                distribution_rows.append(distribution(*common, "reddito_pensionistico_medio_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Reddito annuo della classe diviso per pensionati e per 12 mesi."))
+        for sex, count_index, amount_index in sex_columns:
+            count = number(values[count_index] if len(values) > count_index else None)
+            amount_million = number(values[amount_index] if len(values) > amount_index else None)
+            common = (year, "pensionati_inps", "reddito_pensionistico_mensile", label, minimum, maximum, sex, "Italia - INPS")
+            if count is not None:
+                distribution_rows.append(distribution(*common, "pensionati_per_classe_reddito_pensionistico", count, "numero", source_id, f"Pensionati INPS per reddito pensionistico mensile complessivo e sesso; tabella 3.4, anno {year}."))
+            if amount_million is not None:
+                amount = amount_million * 1_000_000
+                distribution_rows.append(distribution(*common, "reddito_pensionistico_totale", amount, "euro", source_id, f"Reddito pensionistico annuo complessivo della classe per sesso; tabella 3.4, anno {year}."))
+                if count:
+                    distribution_rows.append(distribution(*common, "reddito_pensionistico_medio_mensile_classe", amount / count / 12, "euro", "elaborazione_repo", "Reddito annuo della classe diviso per pensionati e per 12 mesi."))
+
+
+def append_age_distribution(
+    xl: pd.ExcelFile,
+    year: int,
+    source_id: str,
+    distribution_rows: list[dict[str, object]],
+) -> None:
+    sheet = pd.read_excel(xl, sheet_name="3.3", header=None)
+    sex_columns = [
+        ("Maschi", 2, 4),
+        ("Femmine", 5, 7),
+        ("Totale", 8, 10),
+    ]
+    for _, record in sheet.iterrows():
+        values = record.tolist()
+        label = str(values[1]).strip() if len(values) > 1 and pd.notna(values[1]) else ""
+        if not label or label in {"Classe di eta", "Classe di età", "TOTALE"} or label.startswith("Tabella") or label.startswith("*"):
+            continue
+        if "anni" not in label.lower() and "oltre" not in label.lower():
+            continue
+        for sex, count_index, average_index in sex_columns:
+            count = number(values[count_index] if len(values) > count_index else None)
+            average = number(values[average_index] if len(values) > average_index else None)
+            if count is not None:
+                distribution_rows.append(
+                    {
+                        "anno": year,
+                        "popolazione": "pensionati_inps",
+                        "misura_distribuzione": "classe_eta",
+                        "classe_importo": "Tutte",
+                        "classe_importo_min": pd.NA,
+                        "classe_importo_max": pd.NA,
+                        "classe_eta": clean_label(label),
+                        "sesso": sex,
+                        "territorio": "Italia - INPS",
+                        "indicatore_id": "pensionati_per_classe_eta",
+                        "fonte_id": source_id,
+                        "valore": count,
+                        "unita": "numero",
+                        "note": f"Pensionati INPS per classe di eta e sesso; tabella 3.3, anno {year}.",
+                    }
+                )
+            if average is not None:
+                distribution_rows.append(
+                    {
+                        "anno": year,
+                        "popolazione": "pensionati_inps",
+                        "misura_distribuzione": "classe_eta",
+                        "classe_importo": "Tutte",
+                        "classe_importo_min": pd.NA,
+                        "classe_importo_max": pd.NA,
+                        "classe_eta": clean_label(label),
+                        "sesso": sex,
+                        "territorio": "Italia - INPS",
+                        "indicatore_id": "reddito_pensionistico_medio_mensile_eta",
+                        "fonte_id": source_id,
+                        "valore": average,
+                        "unita": "euro",
+                        "note": f"Importo lordo medio mensile del reddito pensionistico per classe di eta e sesso; tabella 3.3, anno {year}.",
+                    }
+                )
 
 
 def build_from_historical_appendices(
@@ -914,6 +982,7 @@ def build_from_historical_appendices(
 
         append_profession_snapshot(xl, year, source_id, profession_rows)
         append_income_distribution(xl, year, source_id, distribution_rows)
+        append_age_distribution(xl, year, source_id, distribution_rows)
         log.append({"fonte": source_id, "tabella": "core_dashboard", "righe": len(rows) + len(management_rows) + len(profession_rows), "stato": "ok"})
 
 
@@ -1037,6 +1106,7 @@ def build_from_appendix(
                 territorial_rows.append(territorial(2025, level, region, f"decile_{decile}_reddito_pensionistico", value, "euro", "inps_appendice_xxv", "Decile del reddito pensionistico lordo annuo; tabella 3.6."))
 
     append_income_distribution(xl, 2025, "inps_appendice_xxv", distribution_rows)
+    append_age_distribution(xl, 2025, "inps_appendice_xxv", distribution_rows)
 
     sheet39 = pd.read_excel(xl, sheet_name="3.9", header=None)
     for _, record in sheet39.iterrows():

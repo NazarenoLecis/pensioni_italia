@@ -97,3 +97,5 @@ decile_D6_reddito_pensionistico,territorio,Sesto decile reddito pensionistico,eu
 decile_D7_reddito_pensionistico,territorio,Settimo decile reddito pensionistico,euro,Soglia del settimo decile del reddito pensionistico lordo annuo per territorio.
 decile_D8_reddito_pensionistico,territorio,Ottavo decile reddito pensionistico,euro,Soglia dell'ottavo decile del reddito pensionistico lordo annuo per territorio.
 decile_D9_reddito_pensionistico,territorio,Nono decile reddito pensionistico,euro,Soglia del nono decile del reddito pensionistico lordo annuo per territorio.
+pensionati_per_classe_eta,distribuzione_eta,Pensionati per classe di eta,numero,Pensionati INPS per fascia di eta e sesso.
+reddito_pensionistico_medio_mensile_eta,distribuzione_eta,Reddito pensionistico medio per classe di eta,euro,Importo lordo medio mensile del reddito pensionistico per fascia di eta e sesso.
