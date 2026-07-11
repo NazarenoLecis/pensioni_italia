@@ -150,7 +150,7 @@ Chiamate usate:
 Osservatori gia' verificati:
 
 - `413`: beneficiari/pensionati, classi di importo del reddito pensionistico, eta, sesso e territorio.
-- `416`: prestazioni/pensioni, classi di importo della singola pensione, eta, sesso e territorio.
+- `416`: prestazioni/pensioni, classi di importo della singola pensione, eta, sesso, territorio e tipologia della prestazione.
 
 Limite noto: alcune combinazioni granulari con classe d'importo o eta possono restituire "Dati al momento non disponibili" anche se la struttura elenca la dimensione. In questi casi la pipeline usa appendici statistiche XLSX o report ufficiali, mantenendo nota e fonte.
 
@@ -166,6 +166,8 @@ Le appendici dei Rapporti annuali sono file XLSX ufficiali e hanno un formato st
 ### Bilanci, rendiconti e GIAS
 
 Le appendici di bilancio INPS, tavola 2.4, danno trasferimenti dal bilancio dello Stato e contributi per anni recenti. I conti economici Open Data coprono il totale dei trasferimenti anche per anni precedenti.
+
+La mappa regionale usa il totale dei pensionati quando la categoria e' `totale`. Quando si seleziona una categoria, il perimetro passa alle prestazioni dell'Osservatorio 416: vecchiaia, invalidita', superstiti, indennitarie e assistenziali. La voce IVS e' ricostruita sommando vecchiaia, invalidita' e superstiti; di conseguenza i rapporti sulla popolazione indicano prestazioni per residenti, non persone pensionate uniche.
 
 La scomposizione GIAS per componenti arriva da:
 

@@ -12,7 +12,7 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
 | Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
 | Open Data INPS ID-5365 e Rendiconti generali INPS, conto economico GIAS | 2015, 2020-2024 | Trasferimenti dal bilancio dello Stato per componente |
-| API Osservatori statistici INPS 413 e 416 | 2020-2024 | Pensionati, pensioni e importo medio lordo per regione |
+| API Osservatori statistici INPS 413 e 416 | 2020-2024 | Pensionati, pensioni, importo medio lordo e tipologia di prestazione per regione |
 | Rendiconto sociale INPS 2017-2021 | 2017-2020 | Numero medio annuo degli assicurati e pensionati regionali 2017-2019 |
 | Rapporti annuali INPS XXIII e XXIV, lavoratori assicurati | 2014, 2019-2024 | Assicurati INPS, settimane medie lavorate e misura ponderata |
 | INPS Open Data, pacchetti 1805, 1812, 1988, 1650 | 2012-2017 | Serie territoriali storiche e distribuzioni granulari per classe di importo |

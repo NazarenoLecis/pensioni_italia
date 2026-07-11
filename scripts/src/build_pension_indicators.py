@@ -16,7 +16,7 @@ FINAL_TABLE_SCHEMAS = {
     "tabella_annuale_pensioni": ["anno", "indicatore_id", "famiglia_definizione", "fonte_id", "valore", "unita", "area", "note"],
     "tabella_gestioni": ["anno", "gestione_id", "gestione_nome", "gruppo_gestione", "indicatore_id", "fonte_id", "valore", "unita", "note"],
     "tabella_trasferimenti_inps": ["anno", "fonte_id", "perimetro", "voce_id", "voce_nome", "categoria_analitica", "finalita", "gestione_id", "indicatore_id", "valore", "unita", "note"],
-    "tabella_territoriale": ["anno", "livello_territoriale", "codice_territorio", "nome_territorio", "indicatore_id", "fonte_id", "valore", "unita", "note"],
+    "tabella_territoriale": ["anno", "livello_territoriale", "codice_territorio", "nome_territorio", "categoria_pensione", "indicatore_id", "fonte_id", "valore", "unita", "note"],
     "tabella_flussi_pensionamento": ["anno", "misura", "gestione_id", "sesso", "classe_eta", "indicatore_id", "fonte_id", "valore", "unita", "note"],
     "tabella_confronto_europeo": ["anno", "paese", "indicatore_id", "definizione", "fonte_id", "valore", "unita", "note"],
     "tabella_distribuzione_pensionati": ["anno", "popolazione", "misura_distribuzione", "classe_importo", "classe_importo_min", "classe_importo_max", "classe_eta", "sesso", "territorio", "indicatore_id", "fonte_id", "valore", "unita", "note"],

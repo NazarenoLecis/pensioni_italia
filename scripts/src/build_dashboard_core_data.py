@@ -69,6 +69,16 @@ GIAS_COMPONENTS = [
     ("interventi_diversi", "Interventi diversi", r"Per interventi diversi"),
     ("reddito_cittadinanza_inclusione", "Reddito di cittadinanza e inclusione", r"Per reddito e pensione di cittadinanza(?:- ADI - SFL)?"),
 ]
+REGIONAL_PENSION_TYPES = [
+    ("vecchiaia", "Vecchiaia", "Vecchiaia"),
+    ("invalidita", "Invalidita'", "Invalidita'"),
+    ("superstiti", "Superstiti", "Superstiti"),
+    ("indennitaria", "Indennitaria", "Indennitaria"),
+    ("assistenziale", "Assistenziale", "Assistenziale"),
+]
+REGIONAL_PENSION_DERIVED_TYPES = [
+    ("ivs", "IVS", ["vecchiaia", "invalidita", "superstiti"]),
+]
 GIAS_OPEN_DATA_COMPONENTS = {
     "Oneri pensionistici": "oneri_pensionistici",
     "Oneri per il mantenimento del salario": "mantenimento_salario",
@@ -794,7 +804,14 @@ def build_replacement_rate_projections(comparison_rows: list[dict[str, object]],
     log.append({"fonte": "rgs_rapporti", "tabella": "tabella_confronto_europeo", "righe": len(series) * len(years), "stato": "ok"})
 
 
-def observatory_region_measure(observatory_id: str, name: str, year: int, measure_id: str, statistic: str) -> dict[str, float]:
+def observatory_region_measure(
+    observatory_id: str,
+    name: str,
+    year: int,
+    measure_id: str,
+    statistic: str,
+    extra_filters: list[dict[str, object]] | None = None,
+) -> dict[str, float]:
     request = {
         "id_osservatorio": observatory_id,
         "nome_osservatorio": name,
@@ -807,7 +824,7 @@ def observatory_region_measure(observatory_id: str, name: str, year: int, measur
             "rows": [{"id": "Regione", "label": "Regione", "order": 1, "aggregate": True, "expand": "", "hide": False}],
             "cols": [],
             "measures": [{"id": measure_id, "label": measure_id, "order": 0, "statistic": statistic}],
-            "filters": [{"id": "anno", "label": "Anno-", "values": [str(year)]}],
+            "filters": [{"id": "anno", "label": "Anno-", "values": [str(year)]}] + list(extra_filters or []),
         },
     }
     filtered = post_inps_observatory("getFiltriOsservatorio", request)
@@ -824,6 +841,66 @@ def observatory_region_measure(observatory_id: str, name: str, year: int, measur
             if parsed is not None:
                 result[region] = parsed
     return result
+
+
+def append_regional_pension_type(
+    territorial_rows: list[dict[str, object]],
+    year: int,
+    category_id: str,
+    category_label: str,
+    counts: dict[str, float],
+    average_annual: dict[str, float],
+    source_id: str,
+    note_suffix: str,
+) -> int:
+    added = 0
+    for region in REGION_NUTS2:
+        pension_count = counts.get(region)
+        average = average_annual.get(region)
+        if pension_count is not None:
+            territorial_rows.append(
+                territorial(
+                    year,
+                    "regione",
+                    region,
+                    "pensioni_vigenti",
+                    pension_count,
+                    "numero",
+                    source_id,
+                    f"Prestazioni pensionistiche {category_label} per regione; {note_suffix}",
+                    category_id,
+                )
+            )
+            added += 1
+        if average is not None:
+            territorial_rows.append(
+                territorial(
+                    year,
+                    "regione",
+                    region,
+                    "importo_medio_pensione_mensile_regionale",
+                    average / 12,
+                    "euro",
+                    source_id,
+                    f"Importo lordo medio annuo delle prestazioni {category_label} diviso per 12; {note_suffix}",
+                    category_id,
+                )
+            )
+        if pension_count is not None and average is not None:
+            territorial_rows.append(
+                territorial(
+                    year,
+                    "regione",
+                    region,
+                    "spesa_pensionistica_regionale",
+                    pension_count * average,
+                    "euro",
+                    "elaborazione_repo",
+                    f"Numero di prestazioni {category_label} per importo lordo medio annuo; {note_suffix}",
+                    category_id,
+                )
+            )
+    return added
 
 
 def build_current_regions_from_api(territorial_rows: list[dict[str, object]], log: list[dict[str, object]]) -> None:
@@ -848,6 +925,69 @@ def build_current_regions_from_api(territorial_rows: list[dict[str, object]], lo
                 territorial_rows.append(territorial(year, "regione", region, "importo_medio_pensione_mensile_regionale", average / 12, "euro", "inps_osservatori_api", "Importo lordo medio annuo della prestazione diviso per 12; Osservatori statistici INPS."))
             if pension_count is not None and average is not None:
                 territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_regionale", pension_count * average, "euro", "elaborazione_repo", "Numero di prestazioni per importo lordo medio annuo; Osservatori statistici INPS."))
+        type_counts: dict[str, dict[str, float]] = {}
+        type_spending: dict[str, dict[str, float]] = {}
+        for category_id, category_label, api_value in REGIONAL_PENSION_TYPES:
+            try:
+                counts = observatory_region_measure(
+                    "416",
+                    "Prestazioni pensionistiche totali",
+                    year,
+                    "_FREQ_SUM",
+                    "SUM",
+                    [{"id": "tipo", "label": "Tipologia", "values": [api_value]}],
+                )
+                average_by_region = observatory_region_measure(
+                    "416",
+                    "Prestazioni pensionistiche totali",
+                    year,
+                    "Importo medio annuo (euro)",
+                    "",
+                    [{"id": "tipo", "label": "Tipologia", "values": [api_value]}],
+                )
+            except (requests.RequestException, ValueError, KeyError):
+                continue
+            type_counts[category_id] = counts
+            type_spending[category_id] = {
+                region: counts[region] * average_by_region[region]
+                for region in counts
+                if region in average_by_region and counts.get(region) is not None and average_by_region.get(region) is not None
+            }
+            added += append_regional_pension_type(
+                territorial_rows,
+                year,
+                category_id,
+                category_label,
+                counts,
+                average_by_region,
+                "inps_osservatori_api",
+                "Osservatori statistici INPS, filtro Tipologia.",
+            )
+        for category_id, category_label, parts in REGIONAL_PENSION_DERIVED_TYPES:
+            counts = {
+                region: sum(type_counts.get(part, {}).get(region, 0) or 0 for part in parts)
+                for region in REGION_NUTS2
+            }
+            spending = {
+                region: sum(type_spending.get(part, {}).get(region, 0) or 0 for part in parts)
+                for region in REGION_NUTS2
+            }
+            averages = {
+                region: spending[region] / counts[region]
+                for region in REGION_NUTS2
+                if counts.get(region)
+            }
+            if averages:
+                added += append_regional_pension_type(
+                    territorial_rows,
+                    year,
+                    category_id,
+                    category_label,
+                    counts,
+                    averages,
+                    "elaborazione_repo",
+                    "Somma di vecchiaia, invalidita' e superstiti da Osservatori statistici INPS.",
+                )
     log.append({"fonte": "inps_osservatori_api", "tabella": "tabella_territoriale", "righe": added, "stato": "ok" if added else "anni_non_disponibili"})
 
 
@@ -1366,21 +1506,25 @@ def build_eurostat_data(
     population = jsonstat_geo_time(request_json(EUROSTAT_POPULATION_URL, cache / "demo_r_pjanaggr3_total.json"))
     gdp = jsonstat_geo_time(request_json(EUROSTAT_REGIONAL_GDP_URL, cache / "nama_10r_2gdp_mio_eur.json"))
     index = {
-        (int(row["anno"]), region_name_for_eurostat(str(row["nome_territorio"])), str(row["indicatore_id"])): number(row["valore"])
+        (int(row["anno"]), region_name_for_eurostat(str(row["nome_territorio"])), str(row["indicatore_id"]), str(row.get("categoria_pensione") or "totale")): number(row["valore"])
         for row in territorial_rows
         if row.get("livello_territoriale") == "regione"
     }
-    for (year, region, indicator), value in list(index.items()):
-        if indicator != "pensionati" or value is None or region not in REGION_NUTS2:
+    for (year, region, indicator, category), value in list(index.items()):
+        count_indicator = "pensionati" if category == "totale" else "pensioni_vigenti"
+        if indicator != count_indicator or value is None or region not in REGION_NUTS2:
             continue
         codes = REGION_NUTS2[region]
         region_population = sum(population.get((code, year), 0) for code in codes)
         region_gdp = sum(gdp.get((code, year), 0) for code in codes) * 1_000_000
-        spending = index.get((year, region, "spesa_pensionistica_regionale"))
+        spending = index.get((year, region, "spesa_pensionistica_regionale", category))
         if region_population:
-            territorial_rows.append(territorial(year, "regione", region, "pensionati_percentuale_popolazione", value / region_population * 100, "percentuale", "inps_eurostat", "Pensionati INPS divisi per popolazione residente Eurostat al 1 gennaio dello stesso anno."))
+            note = "Pensionati INPS divisi per popolazione residente Eurostat al 1 gennaio dello stesso anno."
+            if category != "totale":
+                note = "Prestazioni pensionistiche della categoria divise per popolazione residente Eurostat al 1 gennaio dello stesso anno."
+            territorial_rows.append(territorial(year, "regione", region, "pensionati_percentuale_popolazione", value / region_population * 100, "percentuale", "inps_eurostat", note, category))
         if region_gdp and spending:
-            territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_percentuale_pil", spending / region_gdp * 100, "percentuale_pil", "inps_eurostat", "Spesa pensionistica regionale INPS divisa per PIL regionale Eurostat dello stesso anno."))
+            territorial_rows.append(territorial(year, "regione", region, "spesa_pensionistica_percentuale_pil", spending / region_gdp * 100, "percentuale_pil", "inps_eurostat", "Spesa pensionistica regionale INPS divisa per PIL regionale Eurostat dello stesso anno.", category))
     log.append({"fonte": "eurostat", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
 
 
@@ -1568,12 +1712,13 @@ def region_name_for_eurostat(name: str) -> str:
     return value
 
 
-def territorial(anno: int, livello: str, nome: str, indicatore: str, valore: object, unita: str, fonte: str, note: str) -> dict[str, object]:
+def territorial(anno: int, livello: str, nome: str, indicatore: str, valore: object, unita: str, fonte: str, note: str, categoria_pensione: str = "totale") -> dict[str, object]:
     return {
         "anno": anno,
         "livello_territoriale": livello,
         "codice_territorio": normalize_id(nome),
         "nome_territorio": clean_label(nome),
+        "categoria_pensione": categoria_pensione,
         "indicatore_id": indicatore,
         "fonte_id": fonte,
         "valore": number(valore),
