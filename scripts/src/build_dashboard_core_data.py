@@ -103,6 +103,10 @@ EUROSTAT_REGIONAL_GDP_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nama_10r_2gdp"
     "?lang=en&unit=MIO_EUR&sinceTimePeriod=2012"
 )
+EUROSTAT_NATIONAL_GDP_URL = (
+    "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nama_10_gdp"
+    "?lang=en&unit=CP_MEUR&na_item=B1GQ&geo=IT&sinceTimePeriod=2010"
+)
 EUROSTAT_EMPLOYMENT_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/lfsi_emp_a"
     "?lang=en&indic_em=EMP_LFS&unit=THS_PER&sex=T&age=Y15-64&geo=IT&sinceTimePeriod=2010"
@@ -1187,6 +1191,47 @@ def build_eurostat_data(
     log.append({"fonte": "eurostat", "tabella": "tabella_confronto_europeo", "righe": len(comparison_rows), "stato": "ok"})
 
 
+def build_pension_income_gdp_ratio(
+    annual_rows: list[dict[str, object]],
+    comparison_rows: list[dict[str, object]],
+    log: list[dict[str, object]],
+) -> None:
+    """Calcola reddito pensionistico lordo / PIL nominale usando lo stesso anno."""
+    cache = RAW_DATA_DIR / "eurostat"
+    gdp = jsonstat_geo_time(request_json(EUROSTAT_NATIONAL_GDP_URL, cache / "nama_10_gdp_it_cp_meur.json"))
+    income_rows = [
+        row for row in annual_rows
+        if row.get("indicatore_id") == "reddito_pensionistico_totale"
+        and row.get("area") in {"Italia - complessivi", "Italia - INPS"}
+    ]
+    added = 0
+    for row in income_rows:
+        year = int(row["anno"])
+        gdp_million = gdp.get(("IT", year))
+        income = number(row.get("valore"))
+        if not gdp_million or income is None:
+            continue
+        is_total = row.get("area") == "Italia - complessivi"
+        comparison_rows.append(
+            {
+                "anno": year,
+                "paese": "Italia",
+                "indicatore_id": "reddito_pensionistico_pil_complessivo" if is_total else "reddito_pensionistico_pil_inps",
+                "definizione": "Reddito pensionistico lordo annuo diviso per PIL nominale dello stesso anno",
+                "fonte_id": "inps_eurostat",
+                "valore": income / (gdp_million * 1_000_000) * 100,
+                "unita": "percentuale_pil",
+                "note": (
+                    "Reddito pensionistico lordo complessivo della Tavola 3.1 diviso per PIL nominale Eurostat nama_10_gdp."
+                    if is_total else
+                    "Reddito pensionistico lordo del sottoinsieme pensionati INPS della Tavola 3.1 diviso per PIL nominale Eurostat nama_10_gdp."
+                ),
+            }
+        )
+        added += 1
+    log.append({"fonte": "inps_eurostat", "tabella": "tabella_confronto_europeo", "righe": added, "stato": "ok" if added else "pil_non_disponibile"})
+
+
 def insured_workers_from_reports() -> dict[int, dict[str, float]]:
     try:
         import fitz
@@ -1426,6 +1471,7 @@ def build_dashboard_core_data(log_path: str | Path = LOG_PATHS["dashboard_core"]
     build_replacement_rate_projections(comparison_rows, log_rows)
     build_from_historical_appendices(annual_rows, management_rows, profession_rows, distribution_rows, log_rows)
     build_from_appendix(annual_rows, management_rows, territorial_rows, distribution_rows, profession_rows, log_rows)
+    build_pension_income_gdp_ratio(annual_rows, comparison_rows, log_rows)
     build_workers_and_pensioners(annual_rows, demography_rows, log_rows)
     build_historical_distribution_from_open_data(distribution_rows, log_rows)
     build_pdf_pension_distribution(distribution_rows, log_rows)

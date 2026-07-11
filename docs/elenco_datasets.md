@@ -12,13 +12,14 @@ Il file operativo completo e' `metadata/elenco_datasets.csv`.
 | Bilanci e Rendiconti generali INPS | 2013-2025 | Entrate contributive accertate |
 | Appendici di bilancio INPS XXIII-XXV, tavola 2.4 | 2019-2025 | Trasferimenti dal bilancio dello Stato |
 | Rendiconti generali INPS, conto economico GIAS | 2020-2024 | Trasferimenti dal bilancio dello Stato per componente |
-| Osservatori statistici INPS 413 e 416 | 2020-2024 | Pensionati, pensioni e importo medio lordo per regione |
+| API Osservatori statistici INPS 413 e 416 | 2020-2024 | Pensionati, pensioni e importo medio lordo per regione |
 | Rendiconto sociale INPS 2017-2021 | 2017-2020 | Numero medio annuo degli assicurati e pensionati regionali 2017-2019 |
 | Rapporti annuali INPS XXIII e XXIV, lavoratori assicurati | 2014, 2019-2024 | Assicurati INPS, settimane medie lavorate e misura ponderata |
 | INPS Open Data, pacchetti 1805, 1812, 1988, 1650 | 2012-2017 | Serie territoriali storiche e distribuzioni granulari per classe di importo |
 | Casellario dei pensionati, report 2024 | 2024 | Pensioni per classe di importo e relativa spesa |
 | Eurostat `lfsi_emp_a` | 2010-2025 | Occupati 15-64 anni e rapporto demografico con i pensionati |
 | Eurostat `spr_exp_pens` | 2000-2024 | Spesa pensionistica ESSPROS in percentuale del PIL per paese |
+| Eurostat `nama_10_gdp` | 2018-2025 | PIL nominale nazionale per rapporto reddito pensionistico/PIL nello stesso anno |
 | OCSE, Pensions at a Glance 2025, tavola 8.2 | 2000-2021 | Benchmark Italia e media OCSE: pensioni pubbliche di vecchiaia e superstiti in rapporto al PIL |
 | MEF-RGS, Rapporto n. 26/2025, tavola 6.4 | 2010-2070 | Tassi di sostituzione lordi e netti, con proiezioni per profilo lavorativo e copertura previdenziale |
 | Eurostat `demo_r_pjanaggr3` | dal 2012 | Popolazione regionale per il rapporto pensionati/popolazione |
