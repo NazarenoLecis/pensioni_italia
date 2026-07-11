@@ -55,6 +55,10 @@ FINAL_TABLE_PATHS = {
 ANALYTIC_OUTPUT_PATHS = {
     "calcolatore_pensione_pagata_base": FINAL_DATA_DIR / "calcolatore_pensione_pagata_base.csv",
     "calcolatore_pensione_pagata_carriera": FINAL_DATA_DIR / "calcolatore_pensione_pagata_carriera.csv",
+    "calcolatore_pensione_pagata_parametri": FINAL_DATA_DIR / "calcolatore_pensione_pagata_parametri.csv",
+    "calcolatore_pensione_pagata_coefficienti": FINAL_DATA_DIR / "calcolatore_pensione_pagata_coefficienti.csv",
+    "calcolatore_pensione_pagata_categorie": FINAL_DATA_DIR / "calcolatore_pensione_pagata_categorie.csv",
+    "calcolatore_pensione_pagata_mortalita": FINAL_DATA_DIR / "calcolatore_pensione_pagata_mortalita.csv",
 }
 
 LOG_PATHS = {

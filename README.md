@@ -232,6 +232,10 @@ Gli output del calcolatore sono:
 ```text
 calcolatore_pensione_pagata_carriera.csv
 calcolatore_pensione_pagata_base.csv
+calcolatore_pensione_pagata_parametri.csv
+calcolatore_pensione_pagata_coefficienti.csv
+calcolatore_pensione_pagata_categorie.csv
+calcolatore_pensione_pagata_mortalita.csv
 ```
 
 ## Bilancio INPS e distribuzione professionale
@@ -290,9 +294,21 @@ La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbli
 
 ## Calcolatore pensione pagata
 
-Il calcolatore in `scripts/src/pension_paid_calculator.py` costruisce una carriera teorica, calcola il montante contributivo simulato, lo divide per la speranza di vita residua e confronta il tasso di sostituzione teorico con quello effettivo o ipotizzato.
+Il calcolatore in `scripts/src/pension_paid_calculator.py` e' la sola implementazione principale. Il file `code/calcolatore_pensione_pagata.py` resta come wrapper di compatibilita' e non contiene logica autonoma.
 
-Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. La metrica `quota_pensione_non_coperta` misura la parte della pensione effettiva che eccede la pensione teorica sostenibile nel modello. E' una simulazione didattica, non una stima ufficiale.
+Il modello costruisce una carriera contributiva anno per anno, calcola i contributi finanziari con aliquota di finanziamento, accredita il montante con aliquota di computo e rivaluta il montante con i tassi annui di capitalizzazione comunicati da ISTAT. La pensione contributiva equivalente e' calcolata applicando il coefficiente di trasformazione per anno ed eta' di pensionamento: non usa piu' la divisione del montante per la speranza di vita residua.
+
+La pensione effettiva e' inserita dall'utente nella dashboard. Il tool confronta quella pensione lorda con un controfattuale interamente contributivo e calcola differenza annua, valore atteso delle prestazioni con tavole di mortalita ISTAT, eta' approssimativa di pareggio e indicatore qualitativo di affidabilita'. Non applica la differenza individuale alla spesa pensionistica nazionale.
+
+Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. La prima categoria pienamente operativa e' `generica_fpld`; le altre categorie sono presenti nei metadata ma restano sperimentali o disabilitate finche' non sono disponibili serie storiche complete di CCNL, aliquote, minimali e massimali.
+
+Parametri principali:
+
+- aliquote FPLD: `build_contribution_rate_history.py` e `tabella_parametri_sistema.csv`;
+- tassi di capitalizzazione del montante: nota ISTAT pubblicata dal Ministero del Lavoro;
+- coefficienti di trasformazione: INPS e decreti ministeriali;
+- mortalita': tavole ISTAT della popolazione residente;
+- retribuzione: input utente, RAL calibrata o profilo generico stimato con affidabilita' inferiore.
 
 ## Limitazioni
 

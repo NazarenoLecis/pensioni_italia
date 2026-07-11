@@ -1,170 +1,999 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import date, datetime
+from io import BytesIO
 from pathlib import Path
+import math
 import sys
+import zipfile
 
 import pandas as pd
+import requests
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
-from config import ANALYTIC_OUTPUT_PATHS, SCENARI_CALCOLATORE_PATH
+from config import ANALYTIC_OUTPUT_PATHS, FINAL_TABLE_PATHS, RAW_DATA_DIR, SCENARI_CALCOLATORE_PATH
 from utils import prepare_directories, read_csv_optional, save_table
 
-DEFAULT_SCENARIO = {
-    "anno_inizio": 1985,
-    "anno_pensione": 2025,
-    "salario_iniziale": 100.0,
-    "crescita_salario_annua": 0.03,
-    "aliquota_contributiva": 0.31,
-    "tasso_capitalizzazione": 0.03,
-    "eta_pensione": 64,
-    "speranza_vita_residua": 22.0,
-    "tasso_sostituzione_effettivo": 0.81,
-    "spesa_pensionistica_totale": 347_000_000_000.0,
-    "numero_pensionati": 16_000_000.0,
-    "numero_occupati": 22_837_000.0,
-    "contributi_totali": 269_000_000_000.0,
+
+CURRENT_YEAR = datetime.now().year
+FPLD_PERIODS_PATH = Path(__file__).resolve().parents[2] / "output" / "data" / "clean" / "aliquote_ivs_fpld_periodi.csv"
+MORTALITY_RAW_DIR = RAW_DATA_DIR / "istat_mortalita"
+DEFAULT_MORTALITY_YEAR = 2025
+
+
+CAPITALIZATION_RATES: dict[int, float] = {
+    1976: 0.156004,
+    1977: 0.190509,
+    1978: 0.216775,
+    1979: 0.210426,
+    1980: 0.203363,
+    1981: 0.226929,
+    1982: 0.214364,
+    1983: 0.205767,
+    1984: 0.202694,
+    1985: 0.186164,
+    1986: 0.160219,
+    1987: 0.142703,
+    1988: 0.126341,
+    1989: 0.115314,
+    1990: 0.105217,
+    1991: 0.101013,
+    1992: 0.097075,
+    1993: 0.088611,
+    1994: 0.072990,
+    1995: 0.065726,
+    1996: 0.062054,
+    1997: 0.055871,
+    1998: 0.053597,
+    1999: 0.056503,
+    2000: 0.051781,
+    2001: 0.047781,
+    2002: 0.043698,
+    2003: 0.041614,
+    2004: 0.039272,
+    2005: 0.040506,
+    2006: 0.035386,
+    2007: 0.033937,
+    2008: 0.034625,
+    2009: 0.033201,
+    2010: 0.017935,
+    2011: 0.016165,
+    2012: 0.011344,
+    2013: 0.001643,
+    2014: -0.001927,
+    2015: 0.005058,
+    2016: 0.004684,
+    2017: 0.005205,
+    2018: 0.013478,
+    2019: 0.018254,
+    2020: 0.019199,
+    2021: -0.000215,
+    2022: 0.009973,
+    2023: 0.023082,
+    2024: 0.036622,
+    2025: 0.040445,
 }
 
-SCENARIO_METADATA_FIELDS = ["scenario_id", "descrizione", "note"]
+
+COEFFICIENT_PERIODS: list[dict[str, object]] = [
+    {
+        "periodo_dal": 2021,
+        "periodo_al": 2022,
+        "fonte_id": "inps_coefficiente_trasformazione",
+        "norma": "DM 1 giugno 2020",
+        "note": "Tabella pubblicata da INPS per i coefficienti in vigore dal 1 gennaio 2021.",
+        "coefficients": {
+            57: 4.186,
+            58: 4.289,
+            59: 4.399,
+            60: 4.515,
+            61: 4.639,
+            62: 4.770,
+            63: 4.910,
+            64: 5.060,
+            65: 5.220,
+            66: 5.391,
+            67: 5.575,
+            68: 5.772,
+            69: 5.985,
+            70: 6.215,
+            71: 6.466,
+        },
+    },
+    {
+        "periodo_dal": 2023,
+        "periodo_al": 2024,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione",
+        "norma": "Decreto direttoriale 1 dicembre 2022",
+        "note": "Valori ministeriali 2023-2024 riportati nella tabella storica del calcolatore.",
+        "coefficients": {
+            57: 4.270,
+            58: 4.378,
+            59: 4.493,
+            60: 4.615,
+            61: 4.744,
+            62: 4.882,
+            63: 5.028,
+            64: 5.184,
+            65: 5.352,
+            66: 5.531,
+            67: 5.723,
+            68: 5.931,
+            69: 6.154,
+            70: 6.395,
+            71: 6.655,
+        },
+    },
+    {
+        "periodo_dal": 2025,
+        "periodo_al": 2026,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione",
+        "norma": "Decreto direttoriale 20 novembre 2024",
+        "note": "Valori ministeriali 2025-2026; per eta' intermedie si usa interpolazione mensile lineare.",
+        "coefficients": {
+            57: 4.204,
+            58: 4.308,
+            59: 4.419,
+            60: 4.536,
+            61: 4.661,
+            62: 4.795,
+            63: 4.936,
+            64: 5.088,
+            65: 5.250,
+            66: 5.423,
+            67: 5.608,
+            68: 5.808,
+            69: 6.024,
+            70: 6.258,
+            71: 6.510,
+        },
+    },
+]
 
 
-def build_contribution_career(scenario: dict[str, float | int]) -> pd.DataFrame:
-    """Costruisce una carriera contributiva teorica anno per anno.
+CATEGORY_ROWS: list[dict[str, object]] = [
+    {
+        "categoria_id": "generica_fpld",
+        "categoria_nome": "Carriera generica FPLD",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "Profilo generico",
+        "stato": "operativa",
+        "abilitata_frontend": True,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "stima calibrata su RAL inserita o scenario basso/centrale/alto",
+        "note": "Categoria pienamente calcolabile per il controfattuale contributivo; non ricostruisce una pensione amministrativa INPS.",
+    },
+    {
+        "categoria_id": "metalmeccanici_industria",
+        "categoria_nome": "Metalmeccanici e industria",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "CCNL metalmeccanici industria",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "da integrare con minimi CNEL/ISTAT storici",
+        "note": "Disponibile solo come descrizione metodologica finche' la serie CCNL storica non e' completa.",
+    },
+    {
+        "categoria_id": "commercio_terziario",
+        "categoria_nome": "Commercio e terziario",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "CCNL commercio e terziario",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "da integrare con minimi CNEL/ISTAT storici",
+        "note": "Disabilitata nel frontend finche' la tabella retributiva storica non e' tracciata.",
+    },
+    {
+        "categoria_id": "edilizia",
+        "categoria_nome": "Edilizia",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "CCNL edilizia",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "da integrare",
+        "note": "Categoria non ancora operativa.",
+    },
+    {
+        "categoria_id": "turismo_pubblici_esercizi",
+        "categoria_nome": "Turismo e pubblici esercizi",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "CCNL turismo/pubblici esercizi",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "da integrare",
+        "note": "Categoria non ancora operativa.",
+    },
+    {
+        "categoria_id": "trasporti_logistica",
+        "categoria_nome": "Trasporti e logistica",
+        "gestione": "FPLD lavoratori dipendenti",
+        "ccnl": "CCNL trasporti/logistica",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "storiche FPLD",
+        "profilo_retributivo": "da integrare",
+        "note": "Categoria non ancora operativa.",
+    },
+    {
+        "categoria_id": "agricoltura",
+        "categoria_nome": "Agricoltura",
+        "gestione": "operai agricoli / autonomi agricoli",
+        "ccnl": "Agricoltura",
+        "stato": "non_implementata",
+        "abilitata_frontend": False,
+        "aliquote": "da costruire",
+        "profilo_retributivo": "da integrare",
+        "note": "Richiede serie specifica di aliquote e minimali.",
+    },
+    {
+        "categoria_id": "pubblico_impiego",
+        "categoria_nome": "Pubblico impiego",
+        "gestione": "Gestione dipendenti pubblici",
+        "ccnl": "Comparti pubblici",
+        "stato": "sperimentale",
+        "abilitata_frontend": False,
+        "aliquote": "da costruire",
+        "profilo_retributivo": "RGS Conto annuale da integrare",
+        "note": "Non usa silenziosamente aliquote FPLD.",
+    },
+    {
+        "categoria_id": "artigiani_commercianti",
+        "categoria_nome": "Artigiani e commercianti",
+        "gestione": "Gestioni speciali lavoratori autonomi",
+        "ccnl": "",
+        "stato": "non_implementata",
+        "abilitata_frontend": False,
+        "aliquote": "da costruire",
+        "profilo_retributivo": "reddito imponibile, minimali e massimali",
+        "note": "Serve una serie storica autonoma di aliquote, minimali e redditi imponibili.",
+    },
+    {
+        "categoria_id": "gestione_separata_professionisti",
+        "categoria_nome": "Gestione separata e professionisti",
+        "gestione": "Gestione separata",
+        "ccnl": "",
+        "stato": "non_implementata",
+        "abilitata_frontend": False,
+        "aliquote": "da costruire",
+        "profilo_retributivo": "reddito imponibile e massimali",
+        "note": "Non viene presentata come operativa perche' aliquote e massimali cambiano per profilo assicurativo.",
+    },
+]
 
-    Il criterio e' didattico: salario indicizzato, aliquota media e
-    capitalizzazione figurativa. Le ipotesi possono essere sostituite da serie
-    storiche quando disponibili.
-    """
-    start_year = int(scenario["anno_inizio"])
-    retirement_year = int(scenario["anno_pensione"])
-    starting_salary = float(scenario["salario_iniziale"])
-    salary_growth = float(scenario["crescita_salario_annua"])
-    contribution_rate = float(scenario["aliquota_contributiva"])
-    capitalization_rate = float(scenario["tasso_capitalizzazione"])
 
-    rows = []
-    accrued_capital = 0.0
-    for index, year in enumerate(range(start_year, retirement_year)):
-        salary = starting_salary * ((1 + salary_growth) ** index)
-        contributions = salary * contribution_rate
-        accrued_capital = accrued_capital * (1 + capitalization_rate) + contributions
+PROGRESSION_RATES = {
+    "nessuna": 0.0,
+    "lenta": 0.01,
+    "media": 0.02,
+    "rapida": 0.03,
+}
+
+GENERIC_LEVEL_RAL_2025 = {
+    "basso": 24_000.0,
+    "medio": 36_000.0,
+    "alto": 58_000.0,
+}
+
+
+DEFAULT_SCENARIO = {
+    "scenario_id": "scenario_generico_fpld",
+    "descrizione": "Esempio FPLD con RAL finale inserita e pensione effettiva lorda.",
+    "anno_nascita": 1960,
+    "sesso": "T",
+    "categoria_id": "generica_fpld",
+    "anno_inizio": 1996,
+    "anno_fine": 2024,
+    "anno_pensione": 2025,
+    "eta_pensione": 65,
+    "mesi_eta_pensione": 0,
+    "ral_iniziale": None,
+    "ral_finale": 38_000.0,
+    "ral_anno": None,
+    "ral_valore": None,
+    "livello_iniziale": "medio",
+    "livello_finale": "medio",
+    "progressione": "media",
+    "anni_contribuiti": 29,
+    "percentuale_lavoro": 100.0,
+    "mesi_lavorati_annui": 12.0,
+    "pensione_lorda_mensile_effettiva": 2_000.0,
+    "mensilita_pensione": 13.0,
+    "anno_riferimento_pensione": 2025,
+    "rivalutazione_futura_pensione": "nessuna",
+    "tasso_inflazione_futura": 0.02,
+    "fonte_retribuzione": "ral_finale_inserita",
+    "note": "Scenario dimostrativo. La dashboard permette di sostituire i valori nel browser.",
+}
+
+
+@dataclass(frozen=True)
+class RateInfo:
+    aliquota_finanziamento: float
+    aliquota_computo: float
+    quota_lavoratore: float
+    quota_datore: float
+    fonte_id: str
+    note: str
+
+
+@dataclass(frozen=True)
+class CapitalizationInfo:
+    anno: int
+    tasso: float
+    fonte_id: str
+    natura_dato: str
+    note: str
+
+
+@dataclass(frozen=True)
+class CoefficientInfo:
+    coefficiente: float
+    eta_usata: float
+    fonte_id: str
+    norma: str
+    natura_dato: str
+    note: str
+
+
+def to_float(value: object, default: float | None = None) -> float | None:
+    if value is None:
+        return default
+    if isinstance(value, str) and not value.strip():
+        return default
+    try:
+        number = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(number):
+        return default
+    return number
+
+
+def to_int(value: object, default: int | None = None) -> int | None:
+    number = to_float(value)
+    if number is None:
+        return default
+    return int(number)
+
+
+def normalize_scenario(raw: dict[str, object]) -> dict[str, object]:
+    scenario = dict(DEFAULT_SCENARIO)
+    for key, value in raw.items():
+        if key in scenario and pd.notna(value):
+            scenario[key] = value
+    for key in [
+        "anno_nascita",
+        "anno_inizio",
+        "anno_fine",
+        "anno_pensione",
+        "eta_pensione",
+        "mesi_eta_pensione",
+        "ral_anno",
+        "anno_riferimento_pensione",
+    ]:
+        scenario[key] = to_int(scenario.get(key), to_int(DEFAULT_SCENARIO.get(key)))
+    for key in [
+        "ral_iniziale",
+        "ral_finale",
+        "ral_valore",
+        "anni_contribuiti",
+        "percentuale_lavoro",
+        "mesi_lavorati_annui",
+        "pensione_lorda_mensile_effettiva",
+        "mensilita_pensione",
+        "tasso_inflazione_futura",
+    ]:
+        scenario[key] = to_float(scenario.get(key), to_float(DEFAULT_SCENARIO.get(key)))
+    return scenario
+
+
+def validate_scenario(scenario: dict[str, object]) -> None:
+    start = int(scenario["anno_inizio"])
+    end = int(scenario["anno_fine"])
+    retirement = int(scenario["anno_pensione"])
+    birth = int(scenario["anno_nascita"])
+    age = int(scenario["eta_pensione"])
+    if start > end:
+        raise ValueError("anno_inizio deve essere minore o uguale ad anno_fine")
+    if end >= retirement:
+        raise ValueError("anno_fine deve precedere anno_pensione")
+    if retirement - birth not in range(age - 2, age + 3):
+        raise ValueError("anno_nascita, anno_pensione ed eta_pensione non sono coerenti")
+    if not (0 < float(scenario["percentuale_lavoro"]) <= 100):
+        raise ValueError("percentuale_lavoro deve essere compresa tra 0 e 100")
+    if not (0 <= float(scenario["mesi_lavorati_annui"]) <= 12):
+        raise ValueError("mesi_lavorati_annui deve essere compreso tra 0 e 12")
+
+
+def parse_date(value: object) -> date | None:
+    if value is None or pd.isna(value):
+        return None
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.date()
+
+
+def load_fpld_periods() -> pd.DataFrame:
+    periods = read_csv_optional(FPLD_PERIODS_PATH)
+    if periods.empty:
+        return periods
+    required = {"periodo_dal", "periodo_al", "aliquota_totale"}
+    missing = required - set(periods.columns)
+    if missing:
+        raise ValueError(f"Tabella aliquote FPLD senza colonne: {', '.join(sorted(missing))}")
+    return periods
+
+
+def weighted_fpld_rate_for_year(year: int, periods: pd.DataFrame | None = None) -> RateInfo:
+    periods = load_fpld_periods() if periods is None else periods
+    if periods.empty:
+        return rate_from_system_parameters(year)
+
+    year_start = date(year, 1, 1)
+    year_end = date(year, 12, 31)
+    year_days = (year_end - year_start).days + 1
+    totals = {"aliquota_totale": 0.0, "aliquota_lavoratore": 0.0, "aliquota_datore_lavoro": 0.0}
+    covered_days = 0
+    for _, row in periods.iterrows():
+        start = parse_date(row.get("periodo_dal"))
+        end = parse_date(row.get("periodo_al"))
+        if start is None or end is None or end < year_start or start > year_end:
+            continue
+        overlap_start = max(start, year_start)
+        overlap_end = min(end, year_end)
+        days = (overlap_end - overlap_start).days + 1
+        covered_days += days
+        for column in totals:
+            value = to_float(row.get(column), 0.0) or 0.0
+            totals[column] += value * days / year_days
+    if covered_days == 0:
+        return rate_from_system_parameters(year)
+
+    financing = totals["aliquota_totale"] / 100.0
+    computation = 0.33 if year >= 1996 else financing
+    note = (
+        "Aliquota FPLD ponderata sui giorni dell'anno quando cambia nel corso dell'anno. "
+        "Per il controfattuale prima del 1996 l'aliquota di computo e' approssimata con l'aliquota di finanziamento FPLD."
+    )
+    return RateInfo(
+        aliquota_finanziamento=financing,
+        aliquota_computo=computation,
+        quota_lavoratore=totals["aliquota_lavoratore"] / 100.0,
+        quota_datore=totals["aliquota_datore_lavoro"] / 100.0,
+        fonte_id="inps_aliquote_storiche",
+        note=note,
+    )
+
+
+def rate_from_system_parameters(year: int) -> RateInfo:
+    table = read_csv_optional(FINAL_TABLE_PATHS["tabella_parametri_sistema"])
+    if table.empty:
+        raise ValueError("tabella_parametri_sistema mancante: eseguire build_contribution_rate_history")
+    table["anno"] = pd.to_numeric(table["anno"], errors="coerce")
+    records = table[table["anno"].eq(year)]
+    if records.empty:
+        nearest_year = int(table["anno"].dropna().astype(int).iloc[(table["anno"].dropna() - year).abs().argmin()])
+        records = table[table["anno"].eq(nearest_year)]
+    values = dict(zip(records["parametro_id"], pd.to_numeric(records["valore"], errors="coerce")))
+    total = float(values.get("aliquota_ivs_fpld_totale_fine_anno", 32.7)) / 100.0
+    worker = float(values.get("aliquota_ivs_fpld_lavoratore_fine_anno", 8.89)) / 100.0
+    employer = float(values.get("aliquota_ivs_fpld_datore_lavoro_fine_anno", 23.81)) / 100.0
+    return RateInfo(total, 0.33 if year >= 1996 else total, worker, employer, "inps_aliquote_storiche", "Aliquota FPLD a fine anno.")
+
+
+def capitalization_for_year(year: int) -> CapitalizationInfo:
+    if year in CAPITALIZATION_RATES:
+        return CapitalizationInfo(
+            anno=year,
+            tasso=CAPITALIZATION_RATES[year],
+            fonte_id="istat_tasso_capitalizzazione_montanti",
+            natura_dato="osservato",
+            note="Tasso annuo di capitalizzazione comunicato da ISTAT per la rivalutazione dei montanti contributivi.",
+        )
+    nearest = max([item for item in CAPITALIZATION_RATES if item <= year], default=min(CAPITALIZATION_RATES))
+    return CapitalizationInfo(
+        anno=nearest,
+        tasso=CAPITALIZATION_RATES[nearest],
+        fonte_id="istat_tasso_capitalizzazione_montanti",
+        natura_dato="stimato_per_trascinamento",
+        note=f"Anno {year} fuori dalla tabella disponibile; usato il valore piu' vicino precedente ({nearest}).",
+    )
+
+
+def coefficient_period_for_year(year: int) -> dict[str, object]:
+    for period in COEFFICIENT_PERIODS:
+        if int(period["periodo_dal"]) <= year <= int(period["periodo_al"]):
+            return period
+    if year < int(COEFFICIENT_PERIODS[0]["periodo_dal"]):
+        return COEFFICIENT_PERIODS[0]
+    return COEFFICIENT_PERIODS[-1]
+
+
+def transformation_coefficient(retirement_year: int, age_years: int, age_months: int = 0) -> CoefficientInfo:
+    period = coefficient_period_for_year(retirement_year)
+    coefficients: dict[int, float] = period["coefficients"]  # type: ignore[assignment]
+    age_months = max(0, min(int(age_months), 11))
+    raw_age = int(age_years) + age_months / 12.0
+    min_age = min(coefficients)
+    max_age = max(coefficients)
+    notes = [str(period["note"])]
+    nature = "osservato"
+    if retirement_year < int(period["periodo_dal"]) or retirement_year > int(period["periodo_al"]):
+        nature = "stimato_per_tabella_piu_vicina"
+        notes.append("Per l'anno di pensionamento indicato non e' ancora caricata una tabella storica dedicata.")
+    if raw_age < min_age:
+        raw_age = float(min_age)
+        nature = "stimato_eta_minima"
+        notes.append("Eta' inferiore al minimo: applicato il coefficiente dei 57 anni.")
+    if raw_age > max_age:
+        raw_age = float(max_age)
+        nature = "stimato_eta_massima"
+        notes.append("Eta' superiore al massimo della tabella: applicato l'ultimo coefficiente disponibile.")
+
+    lower = int(math.floor(raw_age))
+    upper = min(lower + 1, max_age)
+    if lower == upper:
+        coefficient = coefficients[lower]
+    else:
+        share = raw_age - lower
+        coefficient = coefficients[lower] + (coefficients[upper] - coefficients[lower]) * share
+        if share:
+            notes.append("Eta' intermedia calcolata con interpolazione mensile lineare tra eta' intere.")
+    return CoefficientInfo(
+        coefficiente=coefficient / 100.0,
+        eta_usata=raw_age,
+        fonte_id=str(period["fonte_id"]),
+        norma=str(period["norma"]),
+        natura_dato=nature,
+        note=" ".join(notes),
+    )
+
+
+def salary_profile(years: list[int], scenario: dict[str, object]) -> tuple[dict[int, float], str]:
+    progression = str(scenario.get("progressione") or "media")
+    growth = PROGRESSION_RATES.get(progression, PROGRESSION_RATES["media"])
+    known_points: dict[int, float] = {}
+    start = years[0]
+    end = years[-1]
+    if to_float(scenario.get("ral_iniziale")):
+        known_points[start] = float(scenario["ral_iniziale"])
+    if to_float(scenario.get("ral_finale")):
+        known_points[end] = float(scenario["ral_finale"])
+    known_year = to_int(scenario.get("ral_anno"))
+    known_value = to_float(scenario.get("ral_valore"))
+    if known_year in years and known_value:
+        known_points[int(known_year)] = float(known_value)
+
+    profile: dict[int, float] = {}
+    if len(known_points) >= 2:
+        ordered = sorted(known_points.items())
+        for year in years:
+            before = max((item for item in ordered if item[0] <= year), default=ordered[0])
+            after = min((item for item in ordered if item[0] >= year), default=ordered[-1])
+            if before[0] == after[0]:
+                profile[year] = before[1]
+            else:
+                years_between = after[0] - before[0]
+                local_growth = (after[1] / before[1]) ** (1 / years_between) - 1 if before[1] > 0 else growth
+                profile[year] = before[1] * ((1 + local_growth) ** (year - before[0]))
+        return profile, "stimato_calibrato_su_ral"
+
+    if len(known_points) == 1:
+        ref_year, ref_salary = next(iter(known_points.items()))
+        for year in years:
+            profile[year] = ref_salary * ((1 + growth) ** (year - ref_year))
+        return profile, "stimato_calibrato_su_ral"
+
+    level = str(scenario.get("livello_finale") or "medio").lower()
+    ref_salary = GENERIC_LEVEL_RAL_2025.get(level, GENERIC_LEVEL_RAL_2025["medio"])
+    for year in years:
+        profile[year] = ref_salary / ((1 + max(growth, 0.015)) ** (2025 - year))
+    return profile, "stimato_scenario_senza_ral"
+
+
+def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame | None = None) -> pd.DataFrame:
+    scenario = normalize_scenario(scenario)
+    validate_scenario(scenario)
+    category = str(scenario.get("categoria_id") or "generica_fpld")
+    if category != "generica_fpld":
+        raise ValueError("Solo la categoria generica FPLD e' pienamente operativa in questa versione.")
+
+    years = list(range(int(scenario["anno_inizio"]), int(scenario["anno_fine"]) + 1))
+    salaries, salary_nature = salary_profile(years, scenario)
+    possible_years = len(years)
+    contributed_years = min(float(scenario["anni_contribuiti"] or possible_years), possible_years)
+    months_from_contributed_years = 12.0 * contributed_years / possible_years if possible_years else 0.0
+    months_per_year = min(float(scenario["mesi_lavorati_annui"] or 12.0), months_from_contributed_years or 12.0)
+    work_share = float(scenario["percentuale_lavoro"] or 100.0) / 100.0
+
+    rows: list[dict[str, object]] = []
+    accrued = 0.0
+    for index, year in enumerate(years, start=1):
+        gross_salary = max(salaries[year], 0.0)
+        taxable = gross_salary * work_share * months_per_year / 12.0
+        rate = weighted_fpld_rate_for_year(year, periods)
+        cap = capitalization_for_year(year)
+        financial_contributions = taxable * rate.aliquota_finanziamento
+        montante_credit = taxable * rate.aliquota_computo
+        accrued = accrued * (1 + cap.tasso) + montante_credit
         rows.append(
             {
+                "scenario_id": scenario["scenario_id"],
                 "anno": year,
-                "indice_anno": index + 1,
-                "salario": salary,
-                "aliquota_contributiva": contribution_rate,
-                "contributi": contributions,
-                "tasso_capitalizzazione": capitalization_rate,
-                "montante_contributivo": accrued_capital,
+                "categoria": category,
+                "gestione": "FPLD lavoratori dipendenti",
+                "ccnl": "Profilo generico",
+                "livello": scenario.get("livello_finale") or "medio",
+                "retribuzione_stimata": gross_salary,
+                "retribuzione_inserita": gross_salary if salary_nature == "stimato_calibrato_su_ral" else None,
+                "mesi_lavorati": months_per_year,
+                "percentuale_part_time": work_share * 100,
+                "imponibile_previdenziale": taxable,
+                "aliquota_finanziamento": rate.aliquota_finanziamento,
+                "aliquota_computo": rate.aliquota_computo,
+                "quota_lavoratore": rate.quota_lavoratore,
+                "quota_datore": rate.quota_datore,
+                "contributi_finanziari": financial_contributions,
+                "accredito_montante": montante_credit,
+                "tasso_rivalutazione": cap.tasso,
+                "montante_fine_anno": accrued,
+                "fonte": rate.fonte_id + "; " + cap.fonte_id,
+                "natura_dato": salary_nature,
+                "note": rate.note + " " + cap.note,
+                "indice_anno": index,
             }
         )
     return pd.DataFrame(rows)
 
 
-def add_scenario_columns(table: pd.DataFrame, scenario: dict[str, object]) -> pd.DataFrame:
-    """Aggiunge identificativo e descrizione scenario a una tabella del calcolatore."""
-    result = table.copy()
-    for column in reversed(SCENARIO_METADATA_FIELDS):
-        result.insert(0, column, scenario.get(column, ""))
-    return result
+def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[str, object] | None = None) -> pd.DataFrame:
+    scenario = normalize_scenario(scenario or DEFAULT_SCENARIO)
+    rows = sorted(annual_rows, key=lambda row: int(row["anno"]))
+    seen_years: set[int] = set()
+    output: list[dict[str, object]] = []
+    accrued = 0.0
+    for index, row in enumerate(rows, start=1):
+        year = int(row["anno"])
+        if year in seen_years:
+            raise ValueError(f"Anno duplicato nella carriera accurata: {year}")
+        seen_years.add(year)
+        taxable = float(to_float(row.get("imponibile_previdenziale"), 0.0) or 0.0)
+        if taxable < 0:
+            raise ValueError("imponibile_previdenziale non puo' essere negativo")
+        rate = weighted_fpld_rate_for_year(year)
+        cap = capitalization_for_year(year)
+        financial = float(to_float(row.get("contributi"), taxable * rate.aliquota_finanziamento) or 0.0)
+        montante_credit = taxable * rate.aliquota_computo + float(to_float(row.get("contributi_figurativi"), 0.0) or 0.0)
+        accrued = accrued * (1 + cap.tasso) + montante_credit
+        output.append(
+            {
+                "scenario_id": scenario["scenario_id"],
+                "anno": year,
+                "categoria": row.get("categoria") or "generica_fpld",
+                "gestione": row.get("gestione") or "FPLD lavoratori dipendenti",
+                "ccnl": row.get("ccnl") or "",
+                "livello": row.get("livello") or "",
+                "retribuzione_stimata": to_float(row.get("retribuzione_stimata")),
+                "retribuzione_inserita": to_float(row.get("retribuzione_inserita"), taxable),
+                "mesi_lavorati": to_float(row.get("mesi_lavorati"), 12.0),
+                "percentuale_part_time": to_float(row.get("percentuale_part_time"), 100.0),
+                "imponibile_previdenziale": taxable,
+                "aliquota_finanziamento": rate.aliquota_finanziamento,
+                "aliquota_computo": rate.aliquota_computo,
+                "quota_lavoratore": rate.quota_lavoratore,
+                "quota_datore": rate.quota_datore,
+                "contributi_finanziari": financial,
+                "accredito_montante": montante_credit,
+                "tasso_rivalutazione": cap.tasso,
+                "montante_fine_anno": accrued,
+                "fonte": "input_utente; " + rate.fonte_id + "; " + cap.fonte_id,
+                "natura_dato": "inserito_utente",
+                "note": "Riga annuale inserita o caricata dall'utente; file non salvato dal frontend.",
+                "indice_anno": index,
+            }
+        )
+    return pd.DataFrame(output)
 
 
-def calculate_paid_pension_metrics(career: pd.DataFrame, scenario: dict[str, float | int]) -> pd.DataFrame:
-    """Calcola pensione teorica sostenibile e quota non coperta."""
+def download_istat_mortality(year: int) -> pd.DataFrame:
+    MORTALITY_RAW_DIR.mkdir(parents=True, exist_ok=True)
+    zip_path = MORTALITY_RAW_DIR / f"datiripartizionecompleti{year}.zip"
+    csv_path = MORTALITY_RAW_DIR / f"datiripartizionecompleti{year}.csv"
+    if not csv_path.exists():
+        url = f"https://demo.istat.it/data/tvm/datiripartizionecompleti{year}.zip"
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        zip_path.write_bytes(response.content)
+        with zipfile.ZipFile(BytesIO(response.content)) as archive:
+            csv_names = [name for name in archive.namelist() if name.lower().endswith(".csv")]
+            if not csv_names:
+                raise ValueError("Archivio ISTAT senza CSV")
+            csv_path.write_bytes(archive.read(csv_names[0]))
+    raw = pd.read_csv(csv_path, sep=",")
+    raw.columns = [str(column).strip() for column in raw.columns]
+    return raw
+
+
+def synthetic_mortality_table(year: int) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for sex in ["Totale", "Maschi", "Femmine"]:
+        survivors = 100_000.0
+        for age in range(0, 111):
+            if age > 0:
+                base_qx = min(0.002 + (age / 105) ** 5 * 0.35, 0.95)
+                if sex == "Maschi":
+                    base_qx *= 1.08
+                if sex == "Femmine":
+                    base_qx *= 0.92
+                survivors *= max(0.0, 1 - min(base_qx, 0.98))
+            rows.append(
+                {
+                    "anno": year,
+                    "sesso": sex,
+                    "eta": age,
+                    "sopravviventi": survivors,
+                    "probabilita_morte_per_mille": None,
+                    "speranza_vita": None,
+                    "fonte_id": "stima_fallback",
+                    "natura_dato": "stimato_fallback",
+                    "note": "Fallback usato solo se il download ISTAT non e' disponibile.",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def build_mortality_table(preferred_year: int = DEFAULT_MORTALITY_YEAR) -> pd.DataFrame:
+    for year in [preferred_year, preferred_year - 1, 2024]:
+        try:
+            raw = download_istat_mortality(year)
+            break
+        except Exception:
+            raw = pd.DataFrame()
+    if raw.empty:
+        return synthetic_mortality_table(2024)
+
+    rip_col = "Ripartizione"
+    sex_col = "Sesso"
+    age_col = next((column for column in raw.columns if str(column).lower().startswith(("eta", "et"))), "Età")
+    survivors_col = "Sopravviventi"
+    qx_col = next((column for column in raw.columns if "morte" in str(column).lower()), "Probabilità di morte (per mille)")
+    life_col = "Speranza di vita"
+    italy = raw[raw[rip_col].astype(str).str.lower().eq("italia")].copy()
+    if italy.empty:
+        italy = raw.copy()
+    rows: list[dict[str, object]] = []
+    sex_map = {"Maschi": "Maschi", "Femmine": "Femmine", "Totale": "Totale", "Maschi e femmine": "Totale"}
+    for _, row in italy.iterrows():
+        age_text = str(row.get(age_col, "")).replace("+", "").strip()
+        age_number = to_float(age_text)
+        if age_number is None:
+            continue
+        rows.append(
+            {
+                "anno": year,
+                "sesso": sex_map.get(str(row.get(sex_col, "")).strip(), str(row.get(sex_col, "")).strip()),
+                "eta": int(age_number),
+                "sopravviventi": to_float(row.get(survivors_col), 0.0),
+                "probabilita_morte_per_mille": to_float(row.get(qx_col)),
+                "speranza_vita": to_float(row.get(life_col)),
+                "fonte_id": "istat_tavole_mortalita",
+                "natura_dato": "osservato",
+                "note": "Tavole di mortalita' ISTAT per l'Italia; anno piu' vicino alla decorrenza disponibile nel payload.",
+            }
+        )
+    return pd.DataFrame(rows).drop_duplicates(subset=["anno", "sesso", "eta"])
+
+
+def survival_probabilities(mortality: pd.DataFrame, sex: str, start_age: int, max_horizon: int = 55) -> list[float]:
+    if mortality.empty:
+        mortality = synthetic_mortality_table(2024)
+    sex_map = {"M": "Maschi", "F": "Femmine", "T": "Totale", "Totale": "Totale", "Maschi": "Maschi", "Femmine": "Femmine"}
+    selected_sex = sex_map.get(str(sex), "Totale")
+    rows = mortality[mortality["sesso"].astype(str).eq(selected_sex)].copy()
+    if rows.empty:
+        rows = mortality[mortality["sesso"].astype(str).eq("Totale")].copy()
+    rows["eta"] = pd.to_numeric(rows["eta"], errors="coerce")
+    rows["sopravviventi"] = pd.to_numeric(rows["sopravviventi"], errors="coerce")
+    base = rows[rows["eta"].eq(start_age)]["sopravviventi"]
+    if base.empty or not float(base.iloc[0]):
+        base_survivors = float(rows["sopravviventi"].max() or 100_000)
+    else:
+        base_survivors = float(base.iloc[0])
+    probabilities: list[float] = []
+    max_age = int(rows["eta"].max()) if not rows.empty else start_age + max_horizon
+    for horizon in range(0, max_horizon + 1):
+        age = min(start_age + horizon, max_age)
+        survivors = rows[rows["eta"].eq(age)]["sopravviventi"]
+        if survivors.empty:
+            probability = 0.0
+        else:
+            probability = max(0.0, min(1.0, float(survivors.iloc[0]) / base_survivors))
+        probabilities.append(probability)
+    return probabilities
+
+
+def effective_annual_pension(scenario: dict[str, object]) -> tuple[float, str]:
+    monthly = float(scenario["pensione_lorda_mensile_effettiva"] or 0.0)
+    months = float(scenario["mensilita_pensione"] or 13.0)
+    annual = monthly * months
+    reference_year = int(scenario.get("anno_riferimento_pensione") or scenario["anno_pensione"])
+    retirement_year = int(scenario["anno_pensione"])
+    if reference_year > retirement_year:
+        years = reference_year - retirement_year
+        annual = annual / ((1 + 0.02) ** years)
+        return annual, "Pensione attuale riportata alla decorrenza con perequazione annua stimata al 2%."
+    return annual, "Pensione lorda annua alla decorrenza o nello stesso anno di pensionamento."
+
+
+def classify_regime(career: pd.DataFrame) -> str:
+    years_before_1996 = len(career[pd.to_numeric(career["anno"], errors="coerce") < 1996])
+    if years_before_1996 == 0:
+        return "contributivo"
+    if years_before_1996 >= 18:
+        return "prevalentemente_retributivo"
+    return "misto"
+
+
+def reliability_level(career: pd.DataFrame, scenario: dict[str, object]) -> tuple[str, str]:
+    natures = set(career["natura_dato"].astype(str))
+    if "inserito_utente" in natures:
+        return "alta", "Imponibili annuali inseriti o caricati: il margine maggiore resta sui parametri normativi e sulla pensione effettiva."
+    has_salary = bool(to_float(scenario.get("ral_iniziale")) or to_float(scenario.get("ral_finale")) or to_float(scenario.get("ral_valore")))
+    if has_salary:
+        return "media", "Aggiungere imponibili annuali dall'estratto contributivo migliorerebbe la precisione."
+    return "bassa", "Inserire almeno una RAL reale o caricare un CSV annuale migliorerebbe molto la stima."
+
+
+def calculate_paid_pension_metrics(
+    career: pd.DataFrame,
+    scenario: dict[str, object],
+    mortality: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     if career.empty:
         raise ValueError("La carriera contributiva e' vuota.")
-    residual_life = float(scenario["speranza_vita_residua"])
-    if residual_life <= 0:
-        raise ValueError("La speranza di vita residua deve essere positiva.")
+    scenario = normalize_scenario(scenario)
+    mortality = build_mortality_table() if mortality is None else mortality
+    accrued = float(career["montante_fine_anno"].iloc[-1])
+    total_financial = float(career["contributi_finanziari"].sum())
+    total_credit = float(career["accredito_montante"].sum())
+    final_salary = float(career["retribuzione_stimata"].dropna().iloc[-1])
+    age = int(scenario["eta_pensione"])
+    age_months = int(scenario.get("mesi_eta_pensione") or 0)
+    coefficient = transformation_coefficient(int(scenario["anno_pensione"]), age, age_months)
+    contributive_pension = accrued * coefficient.coefficiente
+    actual_pension, pension_note = effective_annual_pension(scenario)
+    annual_difference = actual_pension - contributive_pension
+    difference_pct = annual_difference / contributive_pension if contributive_pension else 0.0
+    future_rate = 0.0
+    if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante":
+        future_rate = float(scenario.get("tasso_inflazione_futura") or 0.02)
 
-    last_salary = float(career["salario"].iloc[-1])
-    accrued_capital = float(career["montante_contributivo"].iloc[-1])
-    total_contributions = float(career["contributi"].sum())
-    theoretical_pension = accrued_capital / residual_life
-    theoretical_replacement_rate = theoretical_pension / last_salary
-    actual_replacement_rate = float(scenario["tasso_sostituzione_effettivo"])
-    actual_pension = last_salary * actual_replacement_rate
-    annual_gap = actual_pension - theoretical_pension
-    uncovered_share = max(annual_gap, 0.0) / actual_pension if actual_pension > 0 else 0.0
-
-    total_pension_spending = float(scenario["spesa_pensionistica_totale"])
-    pensioners = float(scenario["numero_pensionati"])
-    workers = float(scenario["numero_occupati"])
-    total_contributions_aggregate = float(scenario["contributi_totali"])
-    uncovered_spending = total_pension_spending * uncovered_share
-
+    survival = survival_probabilities(mortality, str(scenario.get("sesso") or "T"), age)
+    expected_benefits = 0.0
+    cumulative = 0.0
+    break_even_age: float | None = None
+    for horizon, probability in enumerate(survival):
+        payment = actual_pension * ((1 + future_rate) ** horizon)
+        expected_benefits += payment * probability
+        cumulative += payment
+        if break_even_age is None and cumulative >= accrued:
+            break_even_age = age + horizon
+    reliability, improvements = reliability_level(career, scenario)
     return pd.DataFrame(
         [
             {
+                "scenario_id": scenario["scenario_id"],
+                "descrizione": scenario.get("descrizione") or "",
+                "categoria_id": scenario.get("categoria_id") or "generica_fpld",
+                "regime_indicativo": classify_regime(career),
                 "anni_contribuzione": float(len(career)),
-                "ultimo_salario": last_salary,
-                "contributi_versati": total_contributions,
-                "montante_contributivo": accrued_capital,
-                "speranza_vita_residua": residual_life,
-                "pensione_annua_teorica": theoretical_pension,
-                "tasso_sostituzione_teorico": theoretical_replacement_rate,
-                "tasso_sostituzione_effettivo": actual_replacement_rate,
-                "pensione_annua_effettiva": actual_pension,
-                "differenza_annua": annual_gap,
-                "quota_pensione_non_coperta": uncovered_share,
-                "spesa_pensionistica_totale": total_pension_spending,
-                "spesa_non_coperta_stimata": uncovered_spending,
-                "quota_non_coperta_per_pensionato": uncovered_spending / pensioners if pensioners else 0.0,
-                "quota_non_coperta_per_occupato": uncovered_spending / workers if workers else 0.0,
-                "contributi_per_occupato": total_contributions_aggregate / workers if workers else 0.0,
+                "retribuzione_finale": final_salary,
+                "contributi_finanziari_versati": total_financial,
+                "accredito_totale_montante": total_credit,
+                "montante_contributivo": accrued,
+                "coefficiente_trasformazione": coefficient.coefficiente,
+                "eta_coefficiente_usata": coefficient.eta_usata,
+                "pensione_contributiva_annua_equivalente": contributive_pension,
+                "pensione_effettiva_annua_lorda": actual_pension,
+                "differenza_annua_lorda": annual_difference,
+                "differenza_percentuale_su_contributiva": difference_pct,
+                "valore_atteso_prestazioni_lorde": expected_benefits,
+                "eta_pareggio": break_even_age,
+                "rapporto_prestazioni_attese_montante": expected_benefits / accrued if accrued else None,
+                "livello_affidabilita": reliability,
+                "input_migliorativi": improvements,
+                "fonte_coefficiente": coefficient.fonte_id,
+                "natura_coefficiente": coefficient.natura_dato,
+                "note": pension_note + " " + coefficient.note,
             }
         ]
     )
 
 
-def read_scenario(scenario_id: str = "scenario_video_didattico") -> dict[str, object]:
-    """Legge uno scenario dal file metadata e lo fonde con i valori di default."""
-    scenario: dict[str, object] = {"scenario_id": scenario_id, "descrizione": "", "note": "", **DEFAULT_SCENARIO}
-    scenarios = read_csv_optional(SCENARI_CALCOLATORE_PATH)
-    if scenarios.empty or "scenario_id" not in scenarios.columns:
-        return scenario
-    selected = scenarios[scenarios["scenario_id"].astype(str).eq(scenario_id)]
-    if selected.empty:
-        return scenario
-    row = selected.iloc[0].to_dict()
-    for key in scenario:
-        if key in row and pd.notna(row[key]):
-            scenario[key] = row[key]
-    return scenario
-
-
 def read_scenarios() -> list[dict[str, object]]:
-    """Legge tutti gli scenari registrati, o lo scenario default se il file manca."""
     scenarios = read_csv_optional(SCENARI_CALCOLATORE_PATH)
     if scenarios.empty or "scenario_id" not in scenarios.columns:
-        return [read_scenario("scenario_video_didattico")]
-    return [read_scenario(str(scenario_id)) for scenario_id in scenarios["scenario_id"].dropna()]
+        return [normalize_scenario(DEFAULT_SCENARIO)]
+    return [normalize_scenario(row.to_dict()) for _, row in scenarios.iterrows()]
+
+
+def parameter_tables(mortality: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    rate_rows: list[dict[str, object]] = []
+    start_year = 1976
+    end_year = max(CURRENT_YEAR, 2026)
+    for year in range(start_year, end_year + 1):
+        try:
+            rate = weighted_fpld_rate_for_year(year)
+        except Exception:
+            rate = RateInfo(0.327, 0.33 if year >= 1996 else 0.327, 0.0889, 0.2381, "fallback", "Fallback per anno senza aliquota.")
+        cap = capitalization_for_year(year)
+        rate_rows.append(
+            {
+                "anno": year,
+                "gestione": "FPLD lavoratori dipendenti",
+                "aliquota_finanziamento": rate.aliquota_finanziamento,
+                "aliquota_computo": rate.aliquota_computo,
+                "quota_lavoratore": rate.quota_lavoratore,
+                "quota_datore": rate.quota_datore,
+                "tasso_capitalizzazione": cap.tasso,
+                "fonte_id": rate.fonte_id + "; " + cap.fonte_id,
+                "natura_dato": cap.natura_dato,
+                "note": rate.note + " " + cap.note,
+            }
+        )
+    coefficient_rows: list[dict[str, object]] = []
+    for period in COEFFICIENT_PERIODS:
+        for age, coeff in dict(period["coefficients"]).items():
+            coefficient_rows.append(
+                {
+                    "periodo_dal": period["periodo_dal"],
+                    "periodo_al": period["periodo_al"],
+                    "eta": age,
+                    "coefficiente": float(coeff) / 100.0,
+                    "fonte_id": period["fonte_id"],
+                    "norma": period["norma"],
+                    "note": period["note"],
+                }
+            )
+    return pd.DataFrame(rate_rows), pd.DataFrame(coefficient_rows), mortality
 
 
 def run_pension_paid_calculator(scenario_id: str | None = None) -> pd.DataFrame:
-    """Esegue il calcolatore e salva carriera e risultati in output/data/final.
+    prepare_directories([MORTALITY_RAW_DIR])
+    scenarios = read_scenarios()
+    if scenario_id:
+        scenarios = [scenario for scenario in scenarios if str(scenario.get("scenario_id")) == scenario_id]
+    if not scenarios:
+        raise ValueError(f"Nessuno scenario trovato per scenario_id={scenario_id!r}")
 
-    Se `scenario_id` e' assente, calcola tutti gli scenari registrati in
-    metadata/scenari_calcolatore_pensione_pagata.csv.
-    """
-    prepare_directories()
-    scenarios = [read_scenario(scenario_id)] if scenario_id else read_scenarios()
+    mortality = build_mortality_table()
     careers = []
     results = []
     for scenario in scenarios:
-        career = build_contribution_career(scenario)
-        careers.append(add_scenario_columns(career, scenario))
-        result = calculate_paid_pension_metrics(career, scenario)
-        results.append(add_scenario_columns(result, scenario))
+        career = build_simplified_career(scenario)
+        careers.append(career)
+        results.append(calculate_paid_pension_metrics(career, scenario, mortality))
 
     career_table = pd.concat(careers, ignore_index=True) if careers else pd.DataFrame()
     result_table = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+    rate_table, coefficient_table, mortality_table = parameter_tables(mortality)
+    category_table = pd.DataFrame(CATEGORY_ROWS)
+
     save_table(career_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_carriera"])
     save_table(result_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_base"])
+    save_table(rate_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_parametri"])
+    save_table(coefficient_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_coefficienti"])
+    save_table(category_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_categorie"])
+    save_table(mortality_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_mortalita"])
     return result_table
 
 
