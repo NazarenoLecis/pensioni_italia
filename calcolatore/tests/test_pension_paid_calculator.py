@@ -18,6 +18,7 @@ from pension_paid_calculator import (  # noqa: E402
     build_simplified_career,
     calculate_paid_pension_metrics,
     capitalization_for_year,
+    contribution_months_by_year,
     artisan_rate_for_year,
     merchant_rate_for_year,
     pension_gross_annual_from_net,
@@ -29,6 +30,8 @@ from pension_paid_calculator import (  # noqa: E402
 )
 
 
+# Fixture dei test: il calcolatore reale non usa questi valori fissi.
+# Ogni test parte da uno scenario completo e sovrascrive solo i campi rilevanti.
 def scenario(**overrides):
     base = {
         "scenario_id": "test",
@@ -116,7 +119,16 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         career_37 = build_simplified_career(shorter)
         self.assertGreater(float(career_41["imponibile_previdenziale"].sum()), float(career_37["imponibile_previdenziale"].sum()))
         self.assertGreater(float(career_41["montante_fine_anno"].iloc[-1]), float(career_37["montante_fine_anno"].iloc[-1]))
-        self.assertAlmostEqual(float(career_37["mesi_lavorati"].iloc[0]), 8 * 37 / 41, places=6)
+        self.assertEqual(float(career_37.loc[career_37["anno"].eq(1984), "mesi_lavorati"].iloc[0]), 0)
+        self.assertEqual(float(career_37.loc[career_37["anno"].eq(1987), "mesi_lavorati"].iloc[0]), 0)
+        self.assertEqual(float(career_37.loc[career_37["anno"].eq(1988), "mesi_lavorati"].iloc[0]), 8)
+
+    def test_contribution_months_are_allocated_backwards_from_retirement(self):
+        allocation = contribution_months_by_year(list(range(1980, 2022)), 37, 12)
+        self.assertEqual(allocation[1980], 0)
+        self.assertEqual(allocation[1984], 0)
+        self.assertEqual(allocation[1985], 12)
+        self.assertEqual(allocation[2021], 12)
 
     def test_monthly_interpolation_of_transformation_coefficient(self):
         coeff_65 = transformation_coefficient(2025, 65, 0).coefficiente
@@ -129,6 +141,31 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         career = build_simplified_career(low)
         result = calculate_paid_pension_metrics(career, low, synthetic_mortality_table(2024))
         self.assertLess(float(result["differenza_annua_lorda"].iloc[0]), 0)
+
+    def test_actuarial_coverage_uses_required_capital_from_coefficient(self):
+        short = scenario(anno_inizio=1997, anni_contribuiti=28, ral_finale=44_000, pensione_lorda_mensile_effettiva=2_000)
+        career = build_simplified_career(short)
+        result = calculate_paid_pension_metrics(career, short, synthetic_mortality_table(2024)).iloc[0]
+        required = float(result["pensione_effettiva_annua_lorda"]) / float(result["coefficiente_trasformazione"])
+        self.assertAlmostEqual(float(result["capitale_attuariale_necessario"]), required, places=6)
+        self.assertAlmostEqual(
+            float(result["copertura_attuariale"]),
+            float(result["montante_contributivo"]) / required,
+            places=6,
+        )
+
+    def test_worker_and_employer_contributions_are_reported_separately(self):
+        career = build_simplified_career(scenario(anno_inizio=2020, anno_fine=2024, anni_contribuiti=5))
+        self.assertIn("contributi_lavoratore", career.columns)
+        self.assertIn("contributi_datore", career.columns)
+        self.assertAlmostEqual(
+            float((career["contributi_lavoratore"] + career["contributi_datore"]).sum()),
+            float(career["contributi_finanziari"].sum()),
+            delta=5,
+        )
+        result = calculate_paid_pension_metrics(career, scenario(anno_inizio=2020, anno_fine=2024, anni_contribuiti=5), synthetic_mortality_table(2024)).iloc[0]
+        self.assertGreater(float(result["contributi_lavoratore_versati"]), 0)
+        self.assertGreater(float(result["contributi_datore_versati"]), 0)
 
     def test_simplified_and_accurate_match_when_taxables_match(self):
         small = scenario(anno_inizio=2020, anno_fine=2022, anno_pensione=2023, eta_pensione=63, anno_nascita=1960, anni_contribuiti=3)

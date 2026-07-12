@@ -1053,6 +1053,33 @@ def salary_profile(years: list[int], scenario: dict[str, object]) -> tuple[dict[
     return profile, "stimato_scenario_senza_ral"
 
 
+def contribution_months_by_year(years: list[int], contributed_years: float, annual_months: float) -> dict[int, float]:
+    months_by_year = {year: 0.0 for year in years}
+    if not years:
+        return months_by_year
+    capped_years = max(0.0, min(float(contributed_years), float(len(years))))
+    capped_months = max(0.0, min(float(annual_months), 12.0))
+    remaining_months = capped_years * capped_months
+    for year in reversed(years):
+        months = min(capped_months, remaining_months)
+        months_by_year[year] = months
+        remaining_months -= months
+        if remaining_months <= 1e-9:
+            break
+    return months_by_year
+
+
+def contribution_split(taxable: float, rate: RateInfo, financial: float | None = None) -> tuple[float, float, float]:
+    total = taxable * rate.aliquota_finanziamento if financial is None else float(financial)
+    if financial is None or rate.aliquota_finanziamento <= 0:
+        worker = taxable * rate.quota_lavoratore
+        employer = taxable * rate.quota_datore
+    else:
+        worker = total * rate.quota_lavoratore / rate.aliquota_finanziamento
+        employer = total * rate.quota_datore / rate.aliquota_finanziamento
+    return total, worker, employer
+
+
 def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame | None = None) -> pd.DataFrame:
     scenario = normalize_scenario(scenario)
     validate_scenario(scenario)
@@ -1063,18 +1090,22 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
     salaries, salary_nature = salary_profile(years, scenario)
     possible_years = len(years)
     contributed_years = min(float(scenario["anni_contribuiti"] or possible_years), possible_years)
-    contribution_share = contributed_years / possible_years if possible_years else 0.0
-    months_per_year = float(scenario["mesi_lavorati_annui"] or 12.0) * (contribution_share or 1.0)
+    months_by_year = contribution_months_by_year(
+        years,
+        contributed_years,
+        float(scenario["mesi_lavorati_annui"] or 12.0),
+    )
     work_share = float(scenario["percentuale_lavoro"] or 100.0) / 100.0
 
     rows: list[dict[str, object]] = []
     accrued = 0.0
     for index, year in enumerate(years, start=1):
         gross_salary = max(salaries[year], 0.0)
-        taxable = gross_salary * work_share * months_per_year / 12.0
         rate = rate_for_category_year(category, year, periods)
         cap = capitalization_for_year(year)
-        financial_contributions = taxable * rate.aliquota_finanziamento
+        months_per_year = months_by_year[year]
+        taxable = gross_salary * work_share * months_per_year / 12.0
+        financial_contributions, worker_contributions, employer_contributions = contribution_split(taxable, rate)
         montante_credit = taxable * rate.aliquota_computo
         accrued = accrued * (1 + cap.tasso) + montante_credit
         rows.append(
@@ -1095,6 +1126,8 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
                 "quota_lavoratore": rate.quota_lavoratore,
                 "quota_datore": rate.quota_datore,
                 "contributi_finanziari": financial_contributions,
+                "contributi_lavoratore": worker_contributions,
+                "contributi_datore": employer_contributions,
                 "accredito_montante": montante_credit,
                 "tasso_rivalutazione": cap.tasso,
                 "montante_fine_anno": accrued,
@@ -1127,7 +1160,8 @@ def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[s
             raise ValueError("imponibile_previdenziale non puo' essere negativo")
         rate = rate_for_category_year(row_category, year)
         cap = capitalization_for_year(year)
-        financial = float(to_float(row.get("contributi"), taxable * rate.aliquota_finanziamento) or 0.0)
+        explicit_financial = to_float(row.get("contributi"))
+        financial, worker_contributions, employer_contributions = contribution_split(taxable, rate, explicit_financial)
         montante_credit = taxable * rate.aliquota_computo + float(to_float(row.get("contributi_figurativi"), 0.0) or 0.0)
         accrued = accrued * (1 + cap.tasso) + montante_credit
         output.append(
@@ -1148,6 +1182,8 @@ def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[s
                 "quota_lavoratore": rate.quota_lavoratore,
                 "quota_datore": rate.quota_datore,
                 "contributi_finanziari": financial,
+                "contributi_lavoratore": worker_contributions,
+                "contributi_datore": employer_contributions,
                 "accredito_montante": montante_credit,
                 "tasso_rivalutazione": cap.tasso,
                 "montante_fine_anno": accrued,
@@ -1416,6 +1452,8 @@ def calculate_paid_pension_metrics(
     mortality = build_mortality_table() if mortality is None else mortality
     accrued = float(career["montante_fine_anno"].iloc[-1])
     total_financial = float(career["contributi_finanziari"].sum())
+    total_worker = float(career.get("contributi_lavoratore", pd.Series(dtype=float)).sum())
+    total_employer = float(career.get("contributi_datore", pd.Series(dtype=float)).sum())
     total_credit = float(career["accredito_montante"].sum())
     final_salary = float(career["retribuzione_stimata"].dropna().iloc[-1])
     age = int(scenario["eta_pensione"])
@@ -1423,6 +1461,9 @@ def calculate_paid_pension_metrics(
     coefficient = transformation_coefficient(int(scenario["anno_pensione"]), age, age_months)
     contributive_pension = accrued * coefficient.coefficiente
     actual_pension, pension_note = effective_annual_pension(scenario)
+    actuarial_required_capital = actual_pension / coefficient.coefficiente if coefficient.coefficiente else None
+    actuarial_gap = accrued - actuarial_required_capital if actuarial_required_capital else None
+    actuarial_coverage = accrued / actuarial_required_capital if actuarial_required_capital else None
     reference_year = int(scenario.get("anno_riferimento_pensione") or scenario["anno_pensione"])
     years_to_reference = max(0, reference_year - int(scenario["anno_pensione"]))
     reference_factor = (1.02) ** years_to_reference
@@ -1461,8 +1502,13 @@ def calculate_paid_pension_metrics(
                 "anni_contribuzione": float(pd.to_numeric(career["mesi_lavorati"], errors="coerce").fillna(0).sum() / 12.0),
                 "retribuzione_finale": final_salary,
                 "contributi_finanziari_versati": total_financial,
+                "contributi_lavoratore_versati": total_worker,
+                "contributi_datore_versati": total_employer,
                 "accredito_totale_montante": total_credit,
                 "montante_contributivo": accrued,
+                "capitale_attuariale_necessario": actuarial_required_capital,
+                "gap_attuariale_montante": actuarial_gap,
+                "copertura_attuariale": actuarial_coverage,
                 "coefficiente_trasformazione": coefficient.coefficiente,
                 "eta_coefficiente_usata": coefficient.eta_usata,
                 "pensione_contributiva_annua_equivalente": contributive_pension,

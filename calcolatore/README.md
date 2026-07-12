@@ -27,7 +27,9 @@ L'accredito dell'anno non viene quindi rivalutato nello stesso anno. Numeratore,
 
 Gli importi di carriera possono essere inseriti in euro o convertiti dalle lire con il cambio ufficiale 1 euro = 1.936,27 lire. La conversione riguarda le retribuzioni/imponibili storici, non la pensione attuale.
 
-Nella modalita semplificata, `anni di contributi` viene confrontato con gli anni disponibili tra primo anno e pensionamento. Se gli anni contribuiti sono inferiori agli anni disponibili, il modello riduce proporzionalmente i mesi contributivi annui: questo evita che 37 e 41 anni producano lo stesso montante quando il periodo potenziale e' piu lungo.
+Nella modalita semplificata, `anni di contributi` viene confrontato con gli anni disponibili tra primo anno e pensionamento. Se gli anni contribuiti sono inferiori agli anni disponibili, il modello assegna i contributi agli anni piu vicini al pensionamento e lascia scoperti gli anni iniziali della finestra: e' una ricostruzione prudente per chi ha buchi a inizio carriera e rende visibile la differenza tra 37 e 41 anni quando il periodo potenziale e' piu lungo.
+
+Per ogni anno il motore distingue contributi finanziari totali, quota lavoratore, quota datore/impresa e accredito al montante. Per i dipendenti la pensione contributiva usa l'aliquota di computo, mentre la scomposizione finanziaria mostra chi ha sostenuto la contribuzione; per autonomi e gestioni speciali la quota datore e' zero o non applicabile.
 
 ## Categorie operative
 
