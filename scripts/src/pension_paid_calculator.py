@@ -79,6 +79,43 @@ CAPITALIZATION_RATES: dict[int, float] = {
 }
 
 
+# Aliquota IVS ordinaria per titolari artigiani e collaboratori con piu' di 21 anni.
+# Prima del luglio 1990 la contribuzione seguiva classi e importi fissi non
+# confrontabili con un'aliquota applicata direttamente al reddito imponibile.
+ARTISAN_RATES: dict[int, float] = {
+    1990: 0.1200,
+    1991: 0.1275,
+    1992: 0.1350,
+    1993: 0.1429,
+    1994: 0.1500,
+    1995: 0.1500,
+    1996: 0.1500,
+    1997: 0.1500,
+    1998: 0.1580,
+    1999: 0.1600,
+    2000: 0.1620,
+    2001: 0.1640,
+    2002: 0.1660,
+    2003: 0.1680,
+    2004: 0.1700,
+    2005: 0.1720,
+    2006: 0.1740,
+    2007: 0.1950,
+    2008: 0.2000,
+    2009: 0.2000,
+    2010: 0.2000,
+    2011: 0.2000,
+    2012: 0.2130,
+    2013: 0.2175,
+    2014: 0.2220,
+    2015: 0.2265,
+    2016: 0.2310,
+    2017: 0.2355,
+}
+for _year in range(2018, max(CURRENT_YEAR, 2026) + 1):
+    ARTISAN_RATES[_year] = 0.2400
+
+
 COEFFICIENT_PERIODS: list[dict[str, object]] = [
     {
         "periodo_dal": 2021,
@@ -253,16 +290,29 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "note": "Non usa silenziosamente aliquote FPLD.",
     },
     {
-        "categoria_id": "artigiani_commercianti",
-        "categoria_nome": "Artigiani e commercianti",
-        "gestione": "Gestioni speciali lavoratori autonomi",
+        "categoria_id": "artigiani",
+        "categoria_nome": "Artigiani",
+        "gestione": "Gestione speciale artigiani",
+        "ccnl": "",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "artigiani",
+        "aliquote": "storiche Gestione artigiani dal 1990",
+        "profilo_retributivo": "reddito imponibile d'impresa inserito dall'utente",
+        "anno_minimo_calcolabile": 1990,
+        "note": "Calcolo sul reddito imponibile d'impresa inserito. Non ricostruisce minimali, massimali, maggiorazione oltre la prima fascia, riduzioni per eta' o agevolazioni; carriere anteriori al 1990 richiedono dati contributivi anno per anno.",
+    },
+    {
+        "categoria_id": "commercianti",
+        "categoria_nome": "Commercianti",
+        "gestione": "Gestione speciale commercianti",
         "ccnl": "",
         "stato": "non_implementata",
         "abilitata_frontend": False,
-        "profilo_aliquota_id": "autonomi_da_costruire",
+        "profilo_aliquota_id": "commercianti_da_costruire",
         "aliquote": "da costruire",
         "profilo_retributivo": "reddito imponibile, minimali e massimali",
-        "note": "Serve una serie storica autonoma di aliquote, minimali e redditi imponibili.",
+        "note": "Richiede la serie completa comprensiva dell'aliquota aggiuntiva specifica della gestione commercianti.",
     },
     {
         "categoria_id": "gestione_separata_professionisti",
@@ -463,7 +513,7 @@ def category_parameters(category_id: str) -> dict[str, object]:
     category = next((row for row in CATEGORY_ROWS if row["categoria_id"] == category_id), None)
     if category is None:
         raise ValueError(f"Categoria sconosciuta: {category_id}")
-    if not bool(category.get("abilitata_frontend")) or category.get("profilo_aliquota_id") != "fpld":
+    if not bool(category.get("abilitata_frontend")) or category.get("profilo_aliquota_id") not in {"fpld", "artigiani"}:
         raise ValueError(f"Categoria non ancora calcolabile con una serie storica propria: {category['categoria_nome']}")
     return category
 
@@ -534,6 +584,27 @@ def rate_from_system_parameters(year: int) -> RateInfo:
     worker = float(values.get("aliquota_ivs_fpld_lavoratore_fine_anno", 8.89)) / 100.0
     employer = float(values.get("aliquota_ivs_fpld_datore_lavoro_fine_anno", 23.81)) / 100.0
     return RateInfo(total, 0.33 if year >= 1996 else total, worker, employer, "inps_aliquote_storiche", "Aliquota FPLD a fine anno.")
+
+
+def artisan_rate_for_year(year: int) -> RateInfo:
+    if year < min(ARTISAN_RATES):
+        raise ValueError("La serie percentuale della Gestione artigiani e' disponibile dal 1990.")
+    rate = ARTISAN_RATES.get(year, ARTISAN_RATES[max(ARTISAN_RATES)])
+    note = (
+        "Aliquota pensionistica IVS ordinaria della Gestione artigiani, usata sia per il finanziamento sia per il computo. "
+        "Il modello la applica al reddito imponibile inserito e non ricostruisce minimali, massimali, aliquota aggiuntiva "
+        "oltre la prima fascia, riduzioni per eta' o agevolazioni."
+    )
+    if year == 1990:
+        note += " Per il 1990 usa il 12% in vigore dal 1 luglio come approssimazione annuale."
+    return RateInfo(rate, rate, rate, 0.0, "inps_aliquote_artigiani", note)
+
+
+def rate_for_category_year(category_id: str, year: int, periods: pd.DataFrame | None = None) -> RateInfo:
+    category = category_parameters(category_id)
+    if category["profilo_aliquota_id"] == "artigiani":
+        return artisan_rate_for_year(year)
+    return weighted_fpld_rate_for_year(year, periods)
 
 
 def capitalization_for_year(year: int) -> CapitalizationInfo:
@@ -665,7 +736,7 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
     for index, year in enumerate(years, start=1):
         gross_salary = max(salaries[year], 0.0)
         taxable = gross_salary * work_share * months_per_year / 12.0
-        rate = weighted_fpld_rate_for_year(year, periods)
+        rate = rate_for_category_year(category, year, periods)
         cap = capitalization_for_year(year)
         financial_contributions = taxable * rate.aliquota_finanziamento
         montante_credit = taxable * rate.aliquota_computo
@@ -718,7 +789,7 @@ def build_accurate_career(annual_rows: list[dict[str, object]], scenario: dict[s
         taxable = float(to_float(row.get("imponibile_previdenziale"), 0.0) or 0.0)
         if taxable < 0:
             raise ValueError("imponibile_previdenziale non puo' essere negativo")
-        rate = weighted_fpld_rate_for_year(year)
+        rate = rate_for_category_year(row_category, year)
         cap = capitalization_for_year(year)
         financial = float(to_float(row.get("contributi"), taxable * rate.aliquota_finanziamento) or 0.0)
         montante_credit = taxable * rate.aliquota_computo + float(to_float(row.get("contributi_figurativi"), 0.0) or 0.0)
@@ -1081,26 +1152,34 @@ def parameter_tables(mortality: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFram
     rate_rows: list[dict[str, object]] = []
     start_year = 1976
     end_year = max(CURRENT_YEAR, 2026)
-    for year in range(start_year, end_year + 1):
-        try:
-            rate = weighted_fpld_rate_for_year(year)
-        except Exception:
-            rate = RateInfo(0.327, 0.33 if year >= 1996 else 0.327, 0.0889, 0.2381, "fallback", "Fallback per anno senza aliquota.")
-        cap = capitalization_for_year(year)
-        rate_rows.append(
-            {
-                "anno": year,
-                "gestione": "FPLD lavoratori dipendenti",
-                "aliquota_finanziamento": rate.aliquota_finanziamento,
-                "aliquota_computo": rate.aliquota_computo,
-                "quota_lavoratore": rate.quota_lavoratore,
-                "quota_datore": rate.quota_datore,
-                "tasso_capitalizzazione": cap.tasso,
-                "fonte_id": rate.fonte_id + "; " + cap.fonte_id,
-                "natura_dato": cap.natura_dato,
-                "note": rate.note + " " + cap.note,
-            }
-        )
+    profiles = [
+        ("fpld", "generica_fpld", "FPLD lavoratori dipendenti", start_year),
+        ("artigiani", "artigiani", "Gestione speciale artigiani", min(ARTISAN_RATES)),
+    ]
+    for profile_id, category_id, management, profile_start in profiles:
+        for year in range(profile_start, end_year + 1):
+            try:
+                rate = rate_for_category_year(category_id, year)
+            except Exception:
+                if profile_id != "fpld":
+                    raise
+                rate = RateInfo(0.327, 0.33 if year >= 1996 else 0.327, 0.0889, 0.2381, "fallback", "Fallback per anno senza aliquota.")
+            cap = capitalization_for_year(year)
+            rate_rows.append(
+                {
+                    "anno": year,
+                    "profilo_aliquota_id": profile_id,
+                    "gestione": management,
+                    "aliquota_finanziamento": rate.aliquota_finanziamento,
+                    "aliquota_computo": rate.aliquota_computo,
+                    "quota_lavoratore": rate.quota_lavoratore,
+                    "quota_datore": rate.quota_datore,
+                    "tasso_capitalizzazione": cap.tasso,
+                    "fonte_id": rate.fonte_id + "; " + cap.fonte_id,
+                    "natura_dato": cap.natura_dato,
+                    "note": rate.note + " " + cap.note,
+                }
+            )
     coefficient_rows: list[dict[str, object]] = []
     for period in COEFFICIENT_PERIODS:
         for age, coeff in dict(period["coefficients"]).items():

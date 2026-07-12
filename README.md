@@ -302,11 +302,12 @@ La pensione effettiva e' inserita dall'utente nella dashboard. Il tool confronta
 
 La dashboard offre tre modalita': `semplificata`, con pochi input e un profilo retributivo ricostruito; `intermedia`, con valori medi di carriera; `accurata`, con imponibili modificabili anno per anno o caricabili da CSV. Data di nascita e data di pensionamento determinano eta' al pensionamento e tempo gia' trascorso in quiescenza.
 
-Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. I settori metalmeccanica, commercio, edilizia, turismo e trasporti sono operativi come articolazioni del FPLD: il settore descrive la carriera, mentre le aliquote previdenziali restano quelle della gestione. Pubblico impiego, autonomi e Gestione separata restano disabilitati finche' non viene caricata una serie storica specifica di aliquote, minimali e massimali.
+Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. I settori metalmeccanica, commercio, edilizia, turismo e trasporti sono operativi come articolazioni del FPLD: il settore descrive la carriera, mentre le aliquote previdenziali restano quelle della gestione. La categoria `artigiani` usa la propria serie IVS dal 1990: 12% nel 1990, crescita progressiva fino al 20% nel 2008, aumento dal 21,30% del 2012 al 24% raggiunto nel 2018. Per questa categoria gli input RAL vanno letti come reddito imponibile d'impresa; il modello non ricostruisce minimali, massimali, maggiorazioni oltre la prima fascia, riduzioni per eta' o agevolazioni. Pubblico impiego, commercianti e Gestione separata restano disabilitati finche' non viene caricata una serie storica completa specifica.
 
 Parametri principali:
 
 - aliquote FPLD: `build_contribution_rate_history.py` e `tabella_parametri_sistema.csv`;
+- aliquote artigiani: tavole storiche dei Rendiconti INPS e circolari annuali della Gestione artigiani; finanziamento e computo seguono la stessa serie ordinaria;
 - tassi di capitalizzazione del montante: nota ISTAT pubblicata dal Ministero del Lavoro;
 - coefficienti di trasformazione: INPS e decreti ministeriali;
 - mortalita': tavole ISTAT della popolazione residente;

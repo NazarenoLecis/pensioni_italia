@@ -17,6 +17,7 @@ from pension_paid_calculator import (  # noqa: E402
     build_accurate_career,
     build_simplified_career,
     calculate_paid_pension_metrics,
+    artisan_rate_for_year,
     synthetic_mortality_table,
     transformation_coefficient,
     weighted_fpld_rate_for_year,
@@ -129,6 +130,19 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         career = build_simplified_career(scenario(categoria_id="metalmeccanici_industria"))
         self.assertEqual(set(career["categoria"]), {"metalmeccanici_industria"})
         self.assertEqual(set(career["gestione"]), {"FPLD lavoratori dipendenti"})
+
+    def test_artisan_category_uses_its_own_historical_rates(self):
+        self.assertEqual(artisan_rate_for_year(1996).aliquota_computo, 0.15)
+        self.assertEqual(artisan_rate_for_year(2012).aliquota_computo, 0.213)
+        self.assertEqual(artisan_rate_for_year(2025).aliquota_computo, 0.24)
+        artisan = build_simplified_career(scenario(categoria_id="artigiani"))
+        employee = build_simplified_career(scenario(categoria_id="generica_fpld"))
+        self.assertEqual(set(artisan["gestione"]), {"Gestione speciale artigiani"})
+        self.assertLess(float(artisan["montante_fine_anno"].iloc[-1]), float(employee["montante_fine_anno"].iloc[-1]))
+
+    def test_artisan_percentage_series_does_not_invent_pre_1990_rates(self):
+        with self.assertRaises(ValueError):
+            build_simplified_career(scenario(categoria_id="artigiani", anno_inizio=1989))
 
     def test_dates_drive_retirement_age_and_timeline_metrics(self):
         dated = scenario(
