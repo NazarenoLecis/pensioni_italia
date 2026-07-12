@@ -178,11 +178,15 @@ Le appendici dei Rapporti annuali sono file XLSX ufficiali e hanno un formato st
 
 Le fonti INPS della dashboard espongono importi lordi. Il netto nelle distribuzioni dei pensionati e' una simulazione applicata al reddito pensionistico lordo medio della fascia, non un dato individuale osservato. La metodologia applica scaglioni IRPEF nazionali, detrazione per redditi da pensione e una stima media delle addizionali regionali e comunali; non sottrae contributi previdenziali, perche' sulle pensioni non sono dovuti, e non considera altri redditi, oneri deducibili o detraibili e carichi familiari.
 
+Quando una tavola fornisce importi annui o complessivi annui e la dashboard mostra un valore mensile, il calcolo usato e' `importo annuo / 12`. La misura e' utile per confrontare intensita' e territori, ma non coincide necessariamente con la rata pagata al pensionato, che puo' seguire 13 mensilita' o includere conguagli.
+
 ### Bilanci, rendiconti e GIAS
 
 Le appendici di bilancio INPS, tavola 2.4, danno trasferimenti dal bilancio dello Stato e contributi per anni recenti. I conti economici Open Data coprono il totale dei trasferimenti anche per anni precedenti.
 
-La mappa regionale usa il totale dei pensionati quando la categoria e' `totale`. Quando si seleziona una categoria, il perimetro passa alle prestazioni dell'Osservatorio 416: vecchiaia, invalidita', superstiti, indennitarie e assistenziali. La voce IVS e' ricostruita sommando vecchiaia, invalidita' e superstiti; di conseguenza i rapporti sulla popolazione indicano prestazioni per residenti, non persone pensionate uniche.
+La mappa regionale usa il totale dei pensionati quando la categoria e' `totale`. Quando si seleziona una categoria, il perimetro passa alle prestazioni dell'Osservatorio 416: vecchiaia, invalidita' previdenziale, superstiti, indennitarie e assistenziali. La voce IVS e' ricostruita sommando vecchiaia, invalidita' previdenziale e superstiti; di conseguenza i rapporti sulla popolazione indicano prestazioni per residenti, non persone pensionate uniche.
+
+Invalidita' civile fino al requisito dell'assegno sociale, pari a 67 anni nel 2026, e assegno sociale sostitutivo non sono aggregati nella voce `invalidita`, che resta previdenziale. Se la fonte territoriale non espone il dettaglio sotto la tipologia assistenziale, queste prestazioni restano nel perimetro `assistenziale` totale e non vengono presentate come serie separate.
 
 La scomposizione GIAS per componenti arriva da:
 

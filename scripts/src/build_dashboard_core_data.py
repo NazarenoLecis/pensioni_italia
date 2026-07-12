@@ -71,7 +71,7 @@ GIAS_COMPONENTS = [
 ]
 REGIONAL_PENSION_TYPES = [
     ("vecchiaia", "Vecchiaia", "Vecchiaia"),
-    ("invalidita", "Invalidita'", "Invalidita'"),
+    ("invalidita", "Invalidita' previdenziale", "Invalidita'"),
     ("superstiti", "Superstiti", "Superstiti"),
     ("indennitaria", "Indennitaria", "Indennitaria"),
     ("assistenziale", "Assistenziale", "Assistenziale"),
@@ -948,6 +948,12 @@ def append_regional_pension_type(
     note_suffix: str,
 ) -> int:
     added = 0
+    category_note = note_suffix
+    if category_id == "assistenziale":
+        category_note = (
+            f"{note_suffix} Tipologia assistenziale aggregata: invalidita' civile e assegno sociale "
+            "sostitutivo restano in questo perimetro se la tavola territoriale non espone il dettaglio."
+        )
     for region in REGION_NUTS2:
         pension_count = counts.get(region)
         average = average_annual.get(region)
@@ -961,7 +967,7 @@ def append_regional_pension_type(
                     pension_count,
                     "numero",
                     source_id,
-                    f"Prestazioni pensionistiche {category_label} per regione; {note_suffix}",
+                    f"Prestazioni pensionistiche {category_label} per regione; {category_note}",
                     category_id,
                 )
             )
@@ -976,7 +982,7 @@ def append_regional_pension_type(
                     average / 12,
                     "euro",
                     source_id,
-                    f"Importo lordo medio annuo delle prestazioni {category_label} diviso per 12; {note_suffix}",
+                    f"Importo lordo medio annuo delle prestazioni {category_label} diviso per 12; {category_note}",
                     category_id,
                 )
             )
@@ -990,7 +996,7 @@ def append_regional_pension_type(
                     pension_count * average,
                     "euro",
                     "elaborazione_repo",
-                    f"Numero di prestazioni {category_label} per importo lordo medio annuo; {note_suffix}",
+                    f"Numero di prestazioni {category_label} per importo lordo medio annuo; {category_note}",
                     category_id,
                 )
             )
@@ -1080,7 +1086,7 @@ def build_current_regions_from_api(territorial_rows: list[dict[str, object]], lo
                     counts,
                     averages,
                     "elaborazione_repo",
-                    "Somma di vecchiaia, invalidita' e superstiti da Osservatori statistici INPS.",
+                    "Somma di vecchiaia, invalidita' previdenziale e superstiti da Osservatori statistici INPS.",
                 )
     log.append({"fonte": "inps_osservatori_api", "tabella": "tabella_territoriale", "righe": added, "stato": "ok" if added else "anni_non_disponibili"})
 
