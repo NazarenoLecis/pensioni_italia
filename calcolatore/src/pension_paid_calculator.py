@@ -1063,8 +1063,8 @@ def build_simplified_career(scenario: dict[str, object], periods: pd.DataFrame |
     salaries, salary_nature = salary_profile(years, scenario)
     possible_years = len(years)
     contributed_years = min(float(scenario["anni_contribuiti"] or possible_years), possible_years)
-    months_from_contributed_years = 12.0 * contributed_years / possible_years if possible_years else 0.0
-    months_per_year = min(float(scenario["mesi_lavorati_annui"] or 12.0), months_from_contributed_years or 12.0)
+    contribution_share = contributed_years / possible_years if possible_years else 0.0
+    months_per_year = float(scenario["mesi_lavorati_annui"] or 12.0) * (contribution_share or 1.0)
     work_share = float(scenario["percentuale_lavoro"] or 100.0) / 100.0
 
     rows: list[dict[str, object]] = []

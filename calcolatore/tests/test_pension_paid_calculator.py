@@ -109,6 +109,15 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         )
         self.assertLess(float(part["contributi_finanziari"].sum()), float(full["contributi_finanziari"].sum()))
 
+    def test_contributed_years_change_taxable_even_with_seasonal_months(self):
+        full_span = scenario(anno_inizio=1984, anno_fine=2024, anni_contribuiti=41, mesi_lavorati_annui=8)
+        shorter = scenario(anno_inizio=1984, anno_fine=2024, anni_contribuiti=37, mesi_lavorati_annui=8)
+        career_41 = build_simplified_career(full_span)
+        career_37 = build_simplified_career(shorter)
+        self.assertGreater(float(career_41["imponibile_previdenziale"].sum()), float(career_37["imponibile_previdenziale"].sum()))
+        self.assertGreater(float(career_41["montante_fine_anno"].iloc[-1]), float(career_37["montante_fine_anno"].iloc[-1]))
+        self.assertAlmostEqual(float(career_37["mesi_lavorati"].iloc[0]), 8 * 37 / 41, places=6)
+
     def test_monthly_interpolation_of_transformation_coefficient(self):
         coeff_65 = transformation_coefficient(2025, 65, 0).coefficiente
         coeff_66 = transformation_coefficient(2025, 66, 0).coefficiente

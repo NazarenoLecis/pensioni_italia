@@ -27,6 +27,8 @@ L'accredito dell'anno non viene quindi rivalutato nello stesso anno. Numeratore,
 
 Gli importi di carriera possono essere inseriti in euro o convertiti dalle lire con il cambio ufficiale 1 euro = 1.936,27 lire. La conversione riguarda le retribuzioni/imponibili storici, non la pensione attuale.
 
+Nella modalita semplificata, `anni di contributi` viene confrontato con gli anni disponibili tra primo anno e pensionamento. Se gli anni contribuiti sono inferiori agli anni disponibili, il modello riduce proporzionalmente i mesi contributivi annui: questo evita che 37 e 41 anni producano lo stesso montante quando il periodo potenziale e' piu lungo.
+
 ## Categorie operative
 
 Il motore distingue dipendenti privati FPLD, dipendenti pubblici CTPS, dipendenti pubblici CPDEL/CPS/CPI/CPUG, dipendenti agricoli, artigiani, commercianti e autonomi agricoli CD/CM/IAP. Il reddito richiesto cambia con la gestione: RAL per i dipendenti, imponibile d'impresa per artigiani e commercianti, reddito convenzionale contributivo per gli autonomi agricoli.
