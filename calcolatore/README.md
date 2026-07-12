@@ -43,6 +43,8 @@ L'utente inserisce la pensione mensile attuale lorda oppure netta. Dal netto il 
 
 La data di pensionamento determina eta' e mesi alla decorrenza, tabella storica e interpolazione mensile del coefficiente di trasformazione, pensioni gia' ricevute e data di raggiungimento del montante virtuale. L'eta' attesa mostrata usa invece la speranza di vita residua a 65 anni: `65 + e65` dalla tavola ISTAT per sesso.
 
+La pensione futura non e' trattata come rata nominale ferma. Per default il modello applica una rivalutazione futura pari all'inflazione costante indicata dall'utente; lo scenario `nessuna` resta solo come sensibilita'. La copertura attuariale aumenta il capitale necessario con un fattore calcolato sulle probabilita' di sopravvivenza, cosi' una pensione indicizzata richiede piu' capitale di una pensione piatta.
+
 ## Output
 
 Gli output pubblicabili sono scritti in `output/data/final/` e comprendono esempio sintetico, carriera annuale, parametri, coefficienti, categorie, mortalita e indici contrattuali. Il payload pubblico non contiene input personali; il calcolo utente avviene nel browser.

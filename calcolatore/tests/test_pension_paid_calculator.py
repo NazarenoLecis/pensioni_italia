@@ -154,6 +154,17 @@ class PensionPaidCalculatorTests(unittest.TestCase):
             places=6,
         )
 
+    def test_future_indexation_increases_actuarial_required_capital(self):
+        flat = scenario(rivalutazione_futura_pensione="nessuna", tasso_inflazione_futura=0.02)
+        indexed = scenario(rivalutazione_futura_pensione="inflazione_costante", tasso_inflazione_futura=0.02)
+        career = build_simplified_career(flat)
+        flat_result = calculate_paid_pension_metrics(career, flat, synthetic_mortality_table(2024)).iloc[0]
+        indexed_result = calculate_paid_pension_metrics(career, indexed, synthetic_mortality_table(2024)).iloc[0]
+        self.assertGreater(float(indexed_result["fattore_capitale_perequazione"]), 1)
+        self.assertGreater(float(indexed_result["capitale_attuariale_necessario"]), float(flat_result["capitale_attuariale_necessario"]))
+        self.assertLess(float(indexed_result["copertura_attuariale"]), float(flat_result["copertura_attuariale"]))
+        self.assertGreater(float(indexed_result["valore_atteso_prestazioni_lorde"]), float(flat_result["valore_atteso_prestazioni_lorde"]))
+
     def test_worker_and_employer_contributions_are_reported_separately(self):
         career = build_simplified_career(scenario(anno_inizio=2020, anno_fine=2024, anni_contribuiti=5))
         self.assertIn("contributi_lavoratore", career.columns)

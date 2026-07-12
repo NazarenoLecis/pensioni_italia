@@ -495,7 +495,7 @@ DEFAULT_SCENARIO = {
     "pensione_netto_mensile_stimato": None,
     "mensilita_pensione": 13.0,
     "anno_riferimento_pensione": CURRENT_YEAR,
-    "rivalutazione_futura_pensione": "nessuna",
+    "rivalutazione_futura_pensione": "inflazione_costante",
     "tasso_inflazione_futura": 0.02,
     "fonte_retribuzione": "ral_finale_inserita",
     "note": "Scenario dimostrativo. La dashboard permette di sostituire i valori nel browser.",
@@ -1355,11 +1355,7 @@ def pension_timeline_metrics(
     )
     expected_life_age = LIFE_EXPECTANCY_BASE_AGE + life_at_65
     life_remaining = max(0.0, expected_life_age - retirement_age)
-    future_rate = (
-        float(scenario.get("tasso_inflazione_futura") or 0.0)
-        if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante"
-        else 0.0
-    )
+    future_rate = pension_future_indexation_rate(scenario)
     elapsed_months = max(0, int((today - retirement_date).days / 30.436875)) if retirement_date <= today else 0
     expected_months = max(0, int(round(life_remaining * 12)))
     cumulative = 0.0
@@ -1403,6 +1399,22 @@ def pension_timeline_metrics(
         "data_esaurimento_montante_virtuale": exhaustion_date.isoformat() if exhaustion_date else None,
         "eta_esaurimento_montante_virtuale": retirement_age + exhaustion_month / 12.0 if exhaustion_month else None,
     }
+
+
+def pension_future_indexation_rate(scenario: dict[str, object]) -> float:
+    if str(scenario.get("rivalutazione_futura_pensione")) != "inflazione_costante":
+        return 0.0
+    return max(0.0, float(scenario.get("tasso_inflazione_futura") or 0.02))
+
+
+def indexed_annuity_multiplier(scenario: dict[str, object], mortality: pd.DataFrame, start_age: int) -> float:
+    future_rate = pension_future_indexation_rate(scenario)
+    if not future_rate:
+        return 1.0
+    survival = survival_probabilities(mortality, str(scenario.get("sesso") or "T"), start_age)
+    flat = sum(survival)
+    indexed = sum(probability * ((1 + future_rate) ** horizon) for horizon, probability in enumerate(survival))
+    return indexed / flat if flat else 1.0
 
 
 def effective_annual_pension(scenario: dict[str, object]) -> tuple[float, str]:
@@ -1461,7 +1473,8 @@ def calculate_paid_pension_metrics(
     coefficient = transformation_coefficient(int(scenario["anno_pensione"]), age, age_months)
     contributive_pension = accrued * coefficient.coefficiente
     actual_pension, pension_note = effective_annual_pension(scenario)
-    actuarial_required_capital = actual_pension / coefficient.coefficiente if coefficient.coefficiente else None
+    indexation_multiplier = indexed_annuity_multiplier(scenario, mortality, age)
+    actuarial_required_capital = (actual_pension / coefficient.coefficiente) * indexation_multiplier if coefficient.coefficiente else None
     actuarial_gap = accrued - actuarial_required_capital if actuarial_required_capital else None
     actuarial_coverage = accrued / actuarial_required_capital if actuarial_required_capital else None
     reference_year = int(scenario.get("anno_riferimento_pensione") or scenario["anno_pensione"])
@@ -1474,9 +1487,7 @@ def calculate_paid_pension_metrics(
     pension_months = float(scenario.get("mensilita_pensione") or 13.0)
     monthly_actual = actual_pension_reference / pension_months
     monthly_contributive = contributive_pension_reference / pension_months
-    future_rate = 0.0
-    if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante":
-        future_rate = float(scenario.get("tasso_inflazione_futura") or 0.02)
+    future_rate = pension_future_indexation_rate(scenario)
 
     survival = survival_probabilities(mortality, str(scenario.get("sesso") or "T"), age)
     expected_benefits = 0.0
@@ -1507,6 +1518,9 @@ def calculate_paid_pension_metrics(
                 "accredito_totale_montante": total_credit,
                 "montante_contributivo": accrued,
                 "capitale_attuariale_necessario": actuarial_required_capital,
+                "fattore_capitale_perequazione": indexation_multiplier,
+                "rivalutazione_futura_pensione": scenario.get("rivalutazione_futura_pensione"),
+                "tasso_inflazione_futura": future_rate,
                 "gap_attuariale_montante": actuarial_gap,
                 "copertura_attuariale": actuarial_coverage,
                 "coefficiente_trasformazione": coefficient.coefficiente,
