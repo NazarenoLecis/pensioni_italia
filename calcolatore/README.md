@@ -6,6 +6,7 @@ Questa cartella contiene la parte individuale e simulativa del repository. La da
 
 ```bash
 python calcolatore/src/download_capitalization_data.py
+python calcolatore/src/download_contract_wages.py
 python calcolatore/src/pension_paid_calculator.py
 python -m unittest discover -s calcolatore/tests -v
 ```
@@ -21,9 +22,10 @@ L'accredito dell'anno non viene quindi rivalutato nello stesso anno. Numeratore,
 
 ## Modalita
 
-- `Semplificata`: ricostruisce la carriera da pochi dati e produce un ordine di grandezza.
-- `Intermedia`: usa periodi, imponibili iniziali/finali e caratteristiche medie; le dinamiche CCNL ufficiali possono colmare anni mancanti, ma non sostituiscono il dato individuale.
+- `Semplificata`: ricostruisce la carriera da pochi dati. Per i dipendenti usa, quando disponibile, l'indice ISTAT delle retribuzioni contrattuali del contratto scelto, calibrato sull'importo inserito dall'utente.
 - `Accurata`: richiede gli imponibili previdenziali effettivi anno per anno, preferibilmente dall'estratto contributivo INPS. Una tabella generata automaticamente non viene classificata come affidabilita alta finche' l'utente non sostituisce le stime.
+
+Gli importi di carriera possono essere inseriti in euro o convertiti dalle lire con il cambio ufficiale 1 euro = 1.936,27 lire. La conversione riguarda le retribuzioni/imponibili storici, non la pensione attuale.
 
 ## Categorie operative
 
@@ -35,8 +37,8 @@ Minimali, massimali, fasce convenzionali, addizionali fisse, riduzioni e agevola
 
 L'utente inserisce la pensione mensile attuale lorda oppure netta. Dal netto il motore stima il lordo con scaglioni IRPEF 2026, detrazione da pensione e addizionali regionali/comunali medie del 2,1%. Non sottrae contributi previdenziali, perche' la pensione non e' retribuzione da lavoro.
 
-La data di pensionamento determina eta' e mesi alla decorrenza, tabella storica e interpolazione mensile del coefficiente di trasformazione, pensioni gia' ricevute e data di raggiungimento del montante virtuale.
+La data di pensionamento determina eta' e mesi alla decorrenza, tabella storica e interpolazione mensile del coefficiente di trasformazione, pensioni gia' ricevute e data di raggiungimento del montante virtuale. L'eta' attesa mostrata usa invece la speranza di vita residua a 65 anni: `65 + e65` dalla tavola ISTAT per sesso.
 
 ## Output
 
-Gli output pubblicabili sono scritti in `output/data/final/` e comprendono esempio sintetico, carriera annuale, parametri, coefficienti, categorie e mortalita. Il payload pubblico non contiene input personali; il calcolo utente avviene nel browser.
+Gli output pubblicabili sono scritti in `output/data/final/` e comprendono esempio sintetico, carriera annuale, parametri, coefficienti, categorie, mortalita e indici contrattuali. Il payload pubblico non contiene input personali; il calcolo utente avviene nel browser.

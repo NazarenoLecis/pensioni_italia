@@ -23,8 +23,10 @@ from utils import prepare_directories, read_csv_optional, save_table
 CURRENT_YEAR = datetime.now().year
 FPLD_PERIODS_PATH = Path(__file__).resolve().parents[2] / "output" / "data" / "clean" / "aliquote_ivs_fpld_periodi.csv"
 CAPITALIZATION_RATES_PATH = ROOT / "output" / "data" / "clean" / "tassi_capitalizzazione_montante.csv"
+CONTRACT_WAGES_PATH = ROOT / "output" / "data" / "clean" / "retribuzioni_contrattuali_ccnl.csv"
 MORTALITY_RAW_DIR = RAW_DATA_DIR / "istat_mortalita"
 DEFAULT_MORTALITY_YEAR = 2025
+LIFE_EXPECTANCY_BASE_AGE = 65
 
 
 def load_capitalization_table() -> pd.DataFrame:
@@ -57,6 +59,24 @@ _capitalization_table = load_capitalization_table()
 CAPITALIZATION_RATES = dict(
     zip(_capitalization_table["anno"], _capitalization_table["tasso_capitalizzazione"])
 )
+
+
+def load_contract_wages() -> pd.DataFrame:
+    if not CONTRACT_WAGES_PATH.exists():
+        from download_contract_wages import main as download_contract_wages
+
+        download_contract_wages()
+    table = pd.read_csv(CONTRACT_WAGES_PATH)
+    table["anno"] = pd.to_numeric(table["anno"], errors="raise").astype(int)
+    table["indice_retribuzione_contrattuale"] = pd.to_numeric(
+        table["indice_retribuzione_contrattuale"], errors="raise"
+    )
+    if table.duplicated(["indice_ccnl_id", "anno"]).any():
+        raise ValueError("Anni duplicati nelle serie ISTAT delle retribuzioni contrattuali")
+    return table.sort_values(["indice_ccnl_id", "anno"]).reset_index(drop=True)
+
+
+_contract_wages_table = load_contract_wages()
 
 
 # Aliquota IVS ordinaria per titolari artigiani e collaboratori con piu' di 21 anni.
@@ -259,6 +279,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Dipendente privato - profilo generico",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "Profilo generico",
+        "indice_ccnl_id": "totale_economia",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -271,6 +292,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Metalmeccanici e industria",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL metalmeccanici industria",
+        "indice_ccnl_id": "metalmeccanici",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -283,6 +305,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Commercio e terziario",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL commercio e terziario",
+        "indice_ccnl_id": "commercio",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -295,6 +318,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Edilizia",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL edilizia",
+        "indice_ccnl_id": "edilizia",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -307,6 +331,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Turismo e pubblici esercizi",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL turismo/pubblici esercizi",
+        "indice_ccnl_id": "turismo",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -319,6 +344,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Trasporti e logistica",
         "gestione": "FPLD lavoratori dipendenti",
         "ccnl": "CCNL trasporti/logistica",
+        "indice_ccnl_id": "trasporti",
         "stato": "operativa",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "fpld",
@@ -331,6 +357,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Dipendente agricolo",
         "gestione": "FPLD operai agricoli",
         "ccnl": "Operai agricoli",
+        "indice_ccnl_id": "agricoltura",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "agricoli_dipendenti",
@@ -344,6 +371,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Coltivatore diretto, colono, mezzadro o IAP",
         "gestione": "Gestione autonoma agricola CD/CM/IAP",
         "ccnl": "",
+        "indice_ccnl_id": "",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "agricoli_autonomi",
@@ -357,6 +385,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Dipendente pubblico - Stato (CTPS)",
         "gestione": "Gestione dipendenti pubblici - CTPS",
         "ccnl": "Amministrazioni statali",
+        "indice_ccnl_id": "pubblica_amministrazione",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "pubblico_ctps",
@@ -370,6 +399,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Dipendente pubblico - enti locali e sanita'",
         "gestione": "Gestione dipendenti pubblici - CPDEL/CPS/CPI/CPUG",
         "ccnl": "Enti locali, sanita' e casse assimilate",
+        "indice_ccnl_id": "pubblica_amministrazione",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "pubblico_enti_locali",
@@ -383,6 +413,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Artigiani",
         "gestione": "Gestione speciale artigiani",
         "ccnl": "",
+        "indice_ccnl_id": "",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "artigiani",
@@ -396,6 +427,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Commercianti",
         "gestione": "Gestione speciale commercianti",
         "ccnl": "",
+        "indice_ccnl_id": "",
         "stato": "operativa_con_limiti",
         "abilitata_frontend": True,
         "profilo_aliquota_id": "commercianti",
@@ -409,6 +441,7 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Gestione separata e professionisti",
         "gestione": "Gestione separata",
         "ccnl": "",
+        "indice_ccnl_id": "",
         "stato": "non_implementata",
         "abilitata_frontend": False,
         "profilo_aliquota_id": "gestione_separata_da_costruire",
@@ -927,6 +960,53 @@ def transformation_coefficient(retirement_year: int, age_years: int, age_months:
     )
 
 
+def contractual_salary_profile(
+    years: list[int],
+    scenario: dict[str, object],
+    known_points: dict[int, float],
+) -> tuple[dict[int, float], str] | None:
+    category = category_parameters(str(scenario.get("categoria_id") or "generica_fpld"))
+    agreement_id = str(category.get("indice_ccnl_id") or "")
+    if not agreement_id or not known_points:
+        return None
+    table = _contract_wages_table[_contract_wages_table["indice_ccnl_id"].astype(str).eq(agreement_id)].copy()
+    if table.empty:
+        return None
+    index_by_year = dict(
+        zip(
+            pd.to_numeric(table["anno"], errors="coerce").astype(int),
+            pd.to_numeric(table["indice_retribuzione_contrattuale"], errors="coerce"),
+        )
+    )
+    observed_years = sorted(index_by_year)
+    first_observed = observed_years[0]
+    last_observed = observed_years[-1]
+
+    def index_for(year: int) -> float:
+        if year in index_by_year:
+            return float(index_by_year[year])
+        if year < first_observed:
+            return float(index_by_year[first_observed]) / ((1.02) ** (first_observed - year))
+        return float(index_by_year[last_observed]) * ((1.02) ** (year - last_observed))
+
+    ordered = sorted(known_points.items())
+    profile: dict[int, float] = {}
+    if len(ordered) >= 2:
+        first_year, first_value = ordered[0]
+        last_year, last_value = ordered[-1]
+        contractual_ratio = index_for(last_year) / max(index_for(first_year), 0.0001)
+        target_ratio = last_value / max(first_value, 1.0)
+        correction = (target_ratio / max(contractual_ratio, 0.0001)) ** (1 / max(1, last_year - first_year))
+        for year in years:
+            profile[year] = first_value * index_for(year) / index_for(first_year) * (correction ** (year - first_year))
+        return profile, f"indice_retribuzioni_contrattuali_istat_{agreement_id}_calibrato_su_input"
+
+    ref_year, ref_value = ordered[0]
+    for year in years:
+        profile[year] = ref_value * index_for(year) / index_for(ref_year)
+    return profile, f"indice_retribuzioni_contrattuali_istat_{agreement_id}_calibrato_su_input"
+
+
 def salary_profile(years: list[int], scenario: dict[str, object]) -> tuple[dict[int, float], str]:
     progression = str(scenario.get("progressione") or "media")
     growth = PROGRESSION_RATES.get(progression, PROGRESSION_RATES["media"])
@@ -943,6 +1023,10 @@ def salary_profile(years: list[int], scenario: dict[str, object]) -> tuple[dict[
         known_points[int(known_year)] = float(known_value)
 
     profile: dict[int, float] = {}
+    contractual = contractual_salary_profile(years, scenario, known_points)
+    if contractual is not None:
+        return contractual
+
     if len(known_points) >= 2:
         ordered = sorted(known_points.items())
         for year in years:
@@ -1228,8 +1312,13 @@ def pension_timeline_metrics(
     elapsed_years = max(0.0, (today - retirement_date).days / 365.2425) if retirement_date <= today else 0.0
     retirement_age_years, retirement_age_months = age_at_date(birth_date, retirement_date)
     retirement_age = retirement_age_years + retirement_age_months / 12.0
-    life_remaining = remaining_life_expectancy(mortality, str(scenario.get("sesso") or "T"), retirement_age_years)
-    expected_life_age = retirement_age + life_remaining
+    life_at_65 = remaining_life_expectancy(
+        mortality,
+        str(scenario.get("sesso") or "T"),
+        LIFE_EXPECTANCY_BASE_AGE,
+    )
+    expected_life_age = LIFE_EXPECTANCY_BASE_AGE + life_at_65
+    life_remaining = max(0.0, expected_life_age - retirement_age)
     future_rate = (
         float(scenario.get("tasso_inflazione_futura") or 0.0)
         if str(scenario.get("rivalutazione_futura_pensione")) == "inflazione_costante"
@@ -1266,6 +1355,9 @@ def pension_timeline_metrics(
         "anni_dal_pensionamento": elapsed_years,
         "eta_attuale": age_at_date(birth_date, today)[0] + age_at_date(birth_date, today)[1] / 12.0,
         "speranza_vita_residua_pensionamento": life_remaining,
+        "eta_base_speranza_vita": LIFE_EXPECTANCY_BASE_AGE,
+        "speranza_vita_residua_a_65": life_at_65,
+        "eta_attesa_da_speranza_vita_65": expected_life_age,
         "eta_attesa": expected_life_age,
         "prestazioni_lorde_stimate_gia_ricevute": received_to_date,
         "montante_virtuale_residuo_oggi": accrued - received_to_date,
@@ -1495,6 +1587,7 @@ def run_pension_paid_calculator(scenario_id: str | None = None) -> pd.DataFrame:
     save_table(coefficient_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_coefficienti"])
     save_table(category_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_categorie"])
     save_table(mortality_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_mortalita"])
+    save_table(_contract_wages_table, ANALYTIC_OUTPUT_PATHS["calcolatore_pensione_pagata_ccnl"])
     return result_table
 
 

@@ -22,6 +22,7 @@ from pension_paid_calculator import (  # noqa: E402
     merchant_rate_for_year,
     pension_gross_annual_from_net,
     pension_net_annual_estimate,
+    remaining_life_expectancy,
     synthetic_mortality_table,
     transformation_coefficient,
     weighted_fpld_rate_for_year,
@@ -206,6 +207,9 @@ class PensionPaidCalculatorTests(unittest.TestCase):
         result = calculate_paid_pension_metrics(career, dated, synthetic_mortality_table(2024)).iloc[0]
         self.assertEqual(result["data_nascita"], "1960-06-15")
         self.assertEqual(result["data_pensionamento"], "2025-02-15")
+        expected_age = 65 + remaining_life_expectancy(synthetic_mortality_table(2024), "T", 65)
+        self.assertEqual(int(result["eta_base_speranza_vita"]), 65)
+        self.assertAlmostEqual(float(result["eta_attesa"]), expected_age, places=6)
         self.assertGreater(float(result["anni_dal_pensionamento"]), 1)
         self.assertAlmostEqual(
             float(result["differenza_mensile_lorda"]),
