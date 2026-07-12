@@ -6,10 +6,10 @@ import unittest
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "scripts"
-SRC = SCRIPTS / "src"
-for path in [SCRIPTS, SRC]:
+CALCULATOR_SRC = ROOT / "calcolatore" / "src"
+for path in [SCRIPTS, CALCULATOR_SRC]:
     if str(path) not in sys.path:
         sys.path.append(str(path))
 
@@ -17,7 +17,11 @@ from pension_paid_calculator import (  # noqa: E402
     build_accurate_career,
     build_simplified_career,
     calculate_paid_pension_metrics,
+    capitalization_for_year,
     artisan_rate_for_year,
+    merchant_rate_for_year,
+    pension_gross_annual_from_net,
+    pension_net_annual_estimate,
     synthetic_mortality_table,
     transformation_coefficient,
     weighted_fpld_rate_for_year,
@@ -55,6 +59,14 @@ def scenario(**overrides):
 
 
 class PensionPaidCalculatorTests(unittest.TestCase):
+    def test_capitalization_is_calculated_from_nominal_gdp_levels(self):
+        info = capitalization_for_year(2025)
+        expected = (info.pil_finale_milioni / info.pil_iniziale_milioni) ** (1 / 5) - 1
+        self.assertAlmostEqual(info.tasso, expected, places=12)
+        self.assertEqual(info.pil_anno_finale, 2024)
+        self.assertEqual(info.pil_anno_iniziale, 2019)
+        self.assertEqual(info.fonte_id, "istat_pil_nominale_sdmx")
+
     def test_post_1995_complete_career_has_no_aggregate_spending_columns(self):
         career = build_simplified_career(scenario())
         result = calculate_paid_pension_metrics(career, scenario(), synthetic_mortality_table(2024))
@@ -143,6 +155,43 @@ class PensionPaidCalculatorTests(unittest.TestCase):
     def test_artisan_percentage_series_does_not_invent_pre_1990_rates(self):
         with self.assertRaises(ValueError):
             build_simplified_career(scenario(categoria_id="artigiani", anno_inizio=1989))
+
+    def test_merchant_financing_includes_non_pension_component(self):
+        merchant = merchant_rate_for_year(2025)
+        self.assertEqual(merchant.aliquota_computo, 0.24)
+        self.assertEqual(merchant.aliquota_finanziamento, 0.2448)
+        career = build_simplified_career(scenario(categoria_id="commercianti"))
+        self.assertEqual(set(career["gestione"]), {"Gestione speciale commercianti"})
+
+    def test_public_employee_profiles_are_distinct(self):
+        state = build_simplified_career(scenario(categoria_id="pubblico_impiego"))
+        local = build_simplified_career(scenario(categoria_id="pubblico_enti_locali"))
+        self.assertEqual(float(state["aliquota_computo"].iloc[-1]), 0.33)
+        self.assertEqual(float(local["aliquota_computo"].iloc[-1]), 0.3265)
+        self.assertGreater(float(state["montante_fine_anno"].iloc[-1]), float(local["montante_fine_anno"].iloc[-1]))
+
+    def test_agricultural_profiles_use_different_bases_and_rates(self):
+        employee_scenario = scenario(categoria_id="agricoltura", anno_inizio=1998, anni_contribuiti=27)
+        employee = build_simplified_career(employee_scenario)
+        self.assertAlmostEqual(float(employee["aliquota_finanziamento"].iloc[-1]), 0.301, places=6)
+        self.assertEqual(float(employee["aliquota_computo"].iloc[-1]), 0.33)
+        self_employed_scenario = scenario(categoria_id="agricoli_autonomi", anno_inizio=2012, anni_contribuiti=13)
+        self_employed = build_simplified_career(self_employed_scenario)
+        self.assertEqual(float(self_employed["aliquota_computo"].iloc[-1]), 0.24)
+
+    def test_net_to_gross_estimate_round_trips(self):
+        annual_gross = 32_500.0
+        annual_net = pension_net_annual_estimate(annual_gross, 2026)
+        reconstructed = pension_gross_annual_from_net(annual_net, 2026)
+        self.assertAlmostEqual(reconstructed, annual_gross, places=4)
+
+    def test_retirement_year_selects_historical_coefficient_table(self):
+        old = transformation_coefficient(2009, 65, 0)
+        revised = transformation_coefficient(2010, 65, 0)
+        current = transformation_coefficient(2025, 65, 0)
+        self.assertEqual(old.coefficiente, 0.06136)
+        self.assertEqual(revised.coefficiente, 0.0562)
+        self.assertEqual(current.coefficiente, 0.0525)
 
     def test_dates_drive_retirement_age_and_timeline_metrics(self):
         dated = scenario(

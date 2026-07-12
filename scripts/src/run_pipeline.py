@@ -6,8 +6,10 @@ import sys
 import pandas as pd
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.append(str(SCRIPTS_DIR))
+CALCULATOR_SRC_DIR = Path(__file__).resolve().parents[2] / "calcolatore" / "src"
+for path in [SCRIPTS_DIR, CALCULATOR_SRC_DIR]:
+    if str(path) not in sys.path:
+        sys.path.append(str(path))
 
 from build_inps_balance_and_professional_distribution import build_inps_balance_and_professional_distribution
 from build_contribution_rate_history import build_contribution_rate_history

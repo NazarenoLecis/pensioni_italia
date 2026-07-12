@@ -6,7 +6,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
 SRC_DIR = SCRIPTS_DIR / "src"
-for path in [SCRIPTS_DIR, SRC_DIR]:
+CALCULATOR_SRC_DIR = ROOT / "calcolatore" / "src"
+for path in [SCRIPTS_DIR, SRC_DIR, CALCULATOR_SRC_DIR]:
     if str(path) not in sys.path:
         sys.path.append(str(path))
 
@@ -21,7 +22,7 @@ from pension_paid_calculator import (  # noqa: E402
 
 
 def esegui_calcolatore_base():
-    """Wrapper di compatibilita': la logica vive in scripts/src/pension_paid_calculator.py."""
+    """Wrapper di compatibilita': la logica vive in calcolatore/src/."""
     return run_pension_paid_calculator()
 
 

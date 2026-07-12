@@ -24,9 +24,19 @@ pensioni-italia/
       discover_inps_opendata_catalog.py
       build_live_coverage.py
       run_quality_checks.py
-      pension_paid_calculator.py
       make_pension_charts.py
       run_pipeline.py
+
+  calcolatore/
+    README.md
+    src/
+      download_capitalization_data.py
+      pension_paid_calculator.py
+    metadata/
+      scenari_calcolatore_pensione_pagata.csv
+    tests/
+      test_pension_paid_calculator.py
+    notebooks/
 
   notebooks/
     01_overview.ipynb
@@ -34,7 +44,6 @@ pensioni-italia/
     03_pensioni_demografia_lavoro.ipynb
     04_previdenza_complementare_confronti.ipynb
     05_trasferimenti_e_distribuzioni.ipynb
-    06_calcolatore.ipynb
 
   metadata/
     registro_fonti.csv
@@ -49,7 +58,6 @@ pensioni-italia/
     inps_bilancio_fonti.csv
     mapping_gestioni_professioni_inps.csv
     schema_bilancio_professioni_inps.csv
-    scenari_calcolatore_pensione_pagata.csv
 
   docs/
     metodo_bilancio_inps_e_professioni.md
@@ -93,7 +101,8 @@ python scripts/src/build_inps_balance_and_professional_distribution.py
 python scripts/src/discover_inps_opendata_catalog.py
 python scripts/src/build_live_coverage.py
 python scripts/src/run_quality_checks.py
-python scripts/src/pension_paid_calculator.py
+python calcolatore/src/download_capitalization_data.py
+python calcolatore/src/pension_paid_calculator.py
 python scripts/src/make_pension_charts.py
 ```
 
@@ -278,7 +287,7 @@ I notebook sono numerati e pensati per utenti non tecnici. Usano le funzioni in 
 
 La pipeline segue questa sequenza: preparazione delle cartelle, riepilogo fonti e whitelist, inventario dataset INPS, pulizia dei dati disponibili, costruzione delle tabelle finali, serie storica aliquote contributive, costruzione del blocco INPS bilancio/professioni, copertura delle domande live, controlli di qualita', calcolatore e grafici.
 
-Le funzioni generali stanno in `scripts/utils.py`. Percorsi, nomi file e configurazioni stanno in `scripts/config.py`. Il codice operativo sta in `scripts/src`.
+Le funzioni generali stanno in `scripts/utils.py`. Percorsi, nomi file e configurazioni stanno in `scripts/config.py`. La pipeline statistica vive in `scripts/src`; il calcolatore e' isolato in `calcolatore/` e riusa soltanto configurazione, output e fonti comuni.
 
 ## Definizioni principali
 
@@ -294,24 +303,25 @@ La spesa pensionistica INPS, la spesa pensionistica delle amministrazioni pubbli
 
 ## Calcolatore pensione pagata
 
-Il calcolatore in `scripts/src/pension_paid_calculator.py` e' la sola implementazione principale. Il file `code/calcolatore_pensione_pagata.py` resta come wrapper di compatibilita' e non contiene logica autonoma.
+Il calcolatore vive in [`calcolatore/`](calcolatore/README.md). `calcolatore/src/pension_paid_calculator.py` e' la sola implementazione principale; `code/calcolatore_pensione_pagata.py` resta un adattatore di compatibilita' e non contiene logica autonoma.
 
-Il modello costruisce una carriera contributiva anno per anno, calcola i contributi finanziari con aliquota di finanziamento, accredita il montante con aliquota di computo e rivaluta il montante con i tassi annui di capitalizzazione comunicati da ISTAT. La pensione contributiva equivalente e' calcolata applicando il coefficiente di trasformazione per anno ed eta' di pensionamento: non usa piu' la divisione del montante per la speranza di vita residua.
+Il modello costruisce una carriera contributiva anno per anno, calcola i contributi finanziari con aliquota di finanziamento e accredita il montante con aliquota di computo. La rivalutazione non usa una tabella scritta nel codice: scarica via API JSON SDMX i livelli del PIL nominale ISTAT e calcola `(PIL t-1 / PIL t-6)^(1/5)-1`. Il contributo dell'anno viene aggiunto dopo la rivalutazione. I tassi storici pubblicati da ISTAT sono scaricati separatamente come controllo delle revisioni. La pensione contributiva equivalente applica il coefficiente di trasformazione per anno, eta' e mesi al pensionamento.
 
 La pensione effettiva e' inserita dall'utente nella dashboard. Il tool confronta quella pensione lorda con un controfattuale interamente contributivo e calcola differenza per rata, valore atteso delle prestazioni con tavole di mortalita ISTAT, tempo trascorso dal pensionamento, prestazioni gia' ricevute stimate e data in cui le pensioni cumulate raggiungono il montante virtuale. Il montante e' una base di calcolo, non un conto individuale che viene materialmente esaurito. Il risultato individuale non viene applicato alla spesa pensionistica nazionale.
 
-La dashboard offre tre modalita': `semplificata`, con pochi input e un profilo retributivo ricostruito; `intermedia`, con valori medi di carriera; `accurata`, con imponibili modificabili anno per anno o caricabili da CSV. Data di nascita e data di pensionamento determinano eta' al pensionamento e tempo gia' trascorso in quiescenza.
+La dashboard offre tre modalita': `semplificata`, con pochi input e un profilo retributivo ricostruito; `intermedia`, con periodi e valori medi di carriera; `accurata`, con imponibili INPS effettivi modificabili anno per anno o caricabili da CSV. Una tabella solo precompilata resta una stima intermedia. Data di nascita e data di pensionamento determinano eta', mesi, coefficiente storico e tempo gia' trascorso in quiescenza.
 
-Gli scenari modificabili sono in `metadata/scenari_calcolatore_pensione_pagata.csv`. I settori metalmeccanica, commercio, edilizia, turismo e trasporti sono operativi come articolazioni del FPLD: il settore descrive la carriera, mentre le aliquote previdenziali restano quelle della gestione. La categoria `artigiani` usa la propria serie IVS dal 1990: 12% nel 1990, crescita progressiva fino al 20% nel 2008, aumento dal 21,30% del 2012 al 24% raggiunto nel 2018. Per questa categoria gli input RAL vanno letti come reddito imponibile d'impresa; il modello non ricostruisce minimali, massimali, maggiorazioni oltre la prima fascia, riduzioni per eta' o agevolazioni. Pubblico impiego, commercianti e Gestione separata restano disabilitati finche' non viene caricata una serie storica completa specifica.
+Gli scenari modificabili sono in `calcolatore/metadata/scenari_calcolatore_pensione_pagata.csv`. Sono operativi FPLD e relativi settori, dipendenti pubblici CTPS, dipendenti pubblici degli enti locali, dipendenti agricoli, artigiani, commercianti e autonomi agricoli CD/CM/IAP. Per autonomi e agricoltura restano espliciti i limiti su minimali, massimali, fasce convenzionali e agevolazioni.
 
 Parametri principali:
 
 - aliquote FPLD: `build_contribution_rate_history.py` e `tabella_parametri_sistema.csv`;
-- aliquote artigiani: tavole storiche dei Rendiconti INPS e circolari annuali della Gestione artigiani; finanziamento e computo seguono la stessa serie ordinaria;
-- tassi di capitalizzazione del montante: nota ISTAT pubblicata dal Ministero del Lavoro;
+- aliquote per gestione: INPS, rendiconti e circolari annuali per FPLD, pubblico impiego, artigiani, commercianti e agricoltura;
+- capitalizzazione del montante: PIL nominale ISTAT scaricato in JSON SDMX e formula geometrica quinquennale; nota ISTAT del Ministero come controllo;
 - coefficienti di trasformazione: INPS e decreti ministeriali;
 - mortalita': tavole ISTAT della popolazione residente;
-- retribuzione: input utente, RAL calibrata o profilo generico stimato con affidabilita' inferiore.
+- retribuzione: imponibile INPS annuale in modalita accurata; input, dinamiche contrattuali o profilo stimato nelle altre modalita;
+- pensione attuale: input lordo oppure netto convertito in lordo con IRPEF 2026, detrazione da pensione e stima media delle addizionali locali, senza contributi previdenziali sulla pensione.
 
 ## Limitazioni
 

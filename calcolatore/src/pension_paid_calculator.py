@@ -11,7 +11,8 @@ import zipfile
 import pandas as pd
 import requests
 
-SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
@@ -21,62 +22,41 @@ from utils import prepare_directories, read_csv_optional, save_table
 
 CURRENT_YEAR = datetime.now().year
 FPLD_PERIODS_PATH = Path(__file__).resolve().parents[2] / "output" / "data" / "clean" / "aliquote_ivs_fpld_periodi.csv"
+CAPITALIZATION_RATES_PATH = ROOT / "output" / "data" / "clean" / "tassi_capitalizzazione_montante.csv"
 MORTALITY_RAW_DIR = RAW_DATA_DIR / "istat_mortalita"
 DEFAULT_MORTALITY_YEAR = 2025
 
 
-CAPITALIZATION_RATES: dict[int, float] = {
-    1976: 0.156004,
-    1977: 0.190509,
-    1978: 0.216775,
-    1979: 0.210426,
-    1980: 0.203363,
-    1981: 0.226929,
-    1982: 0.214364,
-    1983: 0.205767,
-    1984: 0.202694,
-    1985: 0.186164,
-    1986: 0.160219,
-    1987: 0.142703,
-    1988: 0.126341,
-    1989: 0.115314,
-    1990: 0.105217,
-    1991: 0.101013,
-    1992: 0.097075,
-    1993: 0.088611,
-    1994: 0.072990,
-    1995: 0.065726,
-    1996: 0.062054,
-    1997: 0.055871,
-    1998: 0.053597,
-    1999: 0.056503,
-    2000: 0.051781,
-    2001: 0.047781,
-    2002: 0.043698,
-    2003: 0.041614,
-    2004: 0.039272,
-    2005: 0.040506,
-    2006: 0.035386,
-    2007: 0.033937,
-    2008: 0.034625,
-    2009: 0.033201,
-    2010: 0.017935,
-    2011: 0.016165,
-    2012: 0.011344,
-    2013: 0.001643,
-    2014: -0.001927,
-    2015: 0.005058,
-    2016: 0.004684,
-    2017: 0.005205,
-    2018: 0.013478,
-    2019: 0.018254,
-    2020: 0.019199,
-    2021: -0.000215,
-    2022: 0.009973,
-    2023: 0.023082,
-    2024: 0.036622,
-    2025: 0.040445,
-}
+def load_capitalization_table() -> pd.DataFrame:
+    if not CAPITALIZATION_RATES_PATH.exists():
+        from download_capitalization_data import main as download_capitalization_data
+
+        download_capitalization_data()
+    table = pd.read_csv(CAPITALIZATION_RATES_PATH)
+    numeric_columns = [
+        "anno",
+        "pil_finale_milioni",
+        "pil_iniziale_milioni",
+        "tasso_capitalizzazione",
+        "coefficiente_rivalutazione",
+    ]
+    for column in numeric_columns:
+        table[column] = pd.to_numeric(table[column], errors="raise")
+    table["anno"] = table["anno"].astype(int)
+    expected = (table["pil_finale_milioni"] / table["pil_iniziale_milioni"]) ** (1 / 5) - 1
+    if not (expected - table["tasso_capitalizzazione"]).abs().lt(1e-12).all():
+        raise ValueError("Tassi incoerenti con i livelli di PIL nominale scaricati da ISTAT")
+    if not (
+        table["coefficiente_rivalutazione"] - 1 - table["tasso_capitalizzazione"]
+    ).abs().lt(1e-12).all():
+        raise ValueError("Coefficienti incoerenti: il coefficiente deve essere 1 + tasso")
+    return table.sort_values("anno").reset_index(drop=True)
+
+
+_capitalization_table = load_capitalization_table()
+CAPITALIZATION_RATES = dict(
+    zip(_capitalization_table["anno"], _capitalization_table["tasso_capitalizzazione"])
+)
 
 
 # Aliquota IVS ordinaria per titolari artigiani e collaboratori con piu' di 21 anni.
@@ -116,7 +96,88 @@ for _year in range(2018, max(CURRENT_YEAR, 2026) + 1):
     ARTISAN_RATES[_year] = 0.2400
 
 
+# La gestione commercianti segue l'IVS degli artigiani, con una componente
+# aggiuntiva che finanzia l'indennizzo per cessazione dell'attivita' e non
+# incrementa il montante pensionistico.
+MERCHANT_ADDITIONAL_RATES: dict[int, float] = {
+    **{year: 0.0 for year in range(1990, 1996)},
+    **{year: 0.0009 for year in range(1996, 2022)},
+    **{year: 0.0048 for year in range(2022, max(CURRENT_YEAR, 2026) + 1)},
+}
+
+PUBLIC_PENSION_PROFILES: dict[str, dict[str, float | str]] = {
+    "pubblico_ctps": {
+        "aliquota": 0.3300,
+        "quota_lavoratore": 0.0880,
+        "quota_datore": 0.2420,
+        "gestione": "Gestione dipendenti pubblici - CTPS",
+    },
+    "pubblico_enti_locali": {
+        "aliquota": 0.3265,
+        "quota_lavoratore": 0.0885,
+        "quota_datore": 0.2380,
+        "gestione": "Gestione dipendenti pubblici - CPDEL/CPS/CPI/CPUG",
+    },
+}
+
+AGRICULTURAL_EMPLOYEE_RATES: dict[int, float] = {
+    year: 0.2490 + 0.0020 * (year - 1998)
+    for year in range(1998, max(CURRENT_YEAR, 2026) + 1)
+}
+
+AGRICULTURAL_SELF_EMPLOYED_RATES: dict[int, float] = {
+    2012: 0.216,
+    2013: 0.220,
+    2014: 0.224,
+    2015: 0.228,
+    2016: 0.232,
+    2017: 0.236,
+}
+for _year in range(2018, max(CURRENT_YEAR, 2026) + 1):
+    AGRICULTURAL_SELF_EMPLOYED_RATES[_year] = 0.240
+
+
 COEFFICIENT_PERIODS: list[dict[str, object]] = [
+    {
+        "periodo_dal": 1996,
+        "periodo_al": 2009,
+        "fonte_id": "inps_coefficiente_trasformazione_storico",
+        "norma": "Legge 8 agosto 1995, n. 335",
+        "note": "Coefficienti originari della riforma Dini, validi dal 1996 al 2009; dai 65 anni si applicava il valore massimo della tabella.",
+        "coefficients": {57: 4.720, 58: 4.860, 59: 5.006, 60: 5.163, 61: 5.334, 62: 5.514, 63: 5.706, 64: 5.911, 65: 6.136},
+    },
+    {
+        "periodo_dal": 2010,
+        "periodo_al": 2012,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione_storico",
+        "norma": "Legge 24 dicembre 2007, n. 247",
+        "note": "Prima revisione dei coefficienti, valida dal 2010 al 2012; dai 65 anni si applicava il valore massimo della tabella.",
+        "coefficients": {57: 4.419, 58: 4.538, 59: 4.664, 60: 4.798, 61: 4.940, 62: 5.093, 63: 5.257, 64: 5.432, 65: 5.620},
+    },
+    {
+        "periodo_dal": 2013,
+        "periodo_al": 2015,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione_storico",
+        "norma": "Decreto direttoriale 15 maggio 2012",
+        "note": "Coefficienti validi dal 2013 al 2015.",
+        "coefficients": {57: 4.304, 58: 4.416, 59: 4.535, 60: 4.661, 61: 4.796, 62: 4.940, 63: 5.094, 64: 5.259, 65: 5.435, 66: 5.624, 67: 5.826, 68: 6.046, 69: 6.283, 70: 6.541},
+    },
+    {
+        "periodo_dal": 2016,
+        "periodo_al": 2018,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione_storico",
+        "norma": "Decreto interministeriale 22 giugno 2015",
+        "note": "Coefficienti validi dal 2016 al 2018.",
+        "coefficients": {57: 4.246, 58: 4.354, 59: 4.468, 60: 4.589, 61: 4.719, 62: 4.856, 63: 5.002, 64: 5.159, 65: 5.326, 66: 5.506, 67: 5.700, 68: 5.910, 69: 6.135, 70: 6.378},
+    },
+    {
+        "periodo_dal": 2019,
+        "periodo_al": 2020,
+        "fonte_id": "ministero_lavoro_coefficiente_trasformazione_storico",
+        "norma": "Decreto interministeriale 15 maggio 2018",
+        "note": "Coefficienti validi dal 2019 al 2020.",
+        "coefficients": {57: 4.200, 58: 4.304, 59: 4.414, 60: 4.532, 61: 4.657, 62: 4.790, 63: 4.932, 64: 5.083, 65: 5.245, 66: 5.419, 67: 5.604, 68: 5.804, 69: 6.021, 70: 6.257, 71: 6.513},
+    },
     {
         "periodo_dal": 2021,
         "periodo_al": 2022,
@@ -267,27 +328,55 @@ CATEGORY_ROWS: list[dict[str, object]] = [
     },
     {
         "categoria_id": "agricoltura",
-        "categoria_nome": "Agricoltura",
-        "gestione": "operai agricoli / autonomi agricoli",
-        "ccnl": "Agricoltura",
-        "stato": "non_implementata",
-        "abilitata_frontend": False,
-        "profilo_aliquota_id": "da_costruire",
-        "aliquote": "da costruire",
-        "profilo_retributivo": "da integrare",
-        "note": "Richiede serie specifica di aliquote e minimali.",
+        "categoria_nome": "Dipendente agricolo",
+        "gestione": "FPLD operai agricoli",
+        "ccnl": "Operai agricoli",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "agricoli_dipendenti",
+        "aliquote": "FPLD agricolo dal 1998",
+        "profilo_retributivo": "retribuzione imponibile inserita dall'utente",
+        "anno_minimo_calcolabile": 1998,
+        "note": "Profilo per operai agricoli dipendenti. L'aliquota di finanziamento cresce di 0,20 punti annui; il montante contributivo usa il 33%. Non ricostruisce minimali giornalieri, giornate effettive o agevolazioni territoriali.",
+    },
+    {
+        "categoria_id": "agricoli_autonomi",
+        "categoria_nome": "Coltivatore diretto, colono, mezzadro o IAP",
+        "gestione": "Gestione autonoma agricola CD/CM/IAP",
+        "ccnl": "",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "agricoli_autonomi",
+        "aliquote": "finanziamento e computo dal 2012",
+        "profilo_retributivo": "reddito convenzionale contributivo annuo inserito dall'utente",
+        "anno_minimo_calcolabile": 2012,
+        "note": "L'input economico e' il reddito convenzionale contributivo, non il reddito d'impresa. Non ricostruisce le quattro fasce aziendali, giornate, addizionali fisse, zone svantaggiate, riduzioni o agevolazioni.",
     },
     {
         "categoria_id": "pubblico_impiego",
-        "categoria_nome": "Pubblico impiego",
-        "gestione": "Gestione dipendenti pubblici",
-        "ccnl": "Comparti pubblici",
-        "stato": "sperimentale",
-        "abilitata_frontend": False,
-        "profilo_aliquota_id": "gestione_pubblica_da_costruire",
-        "aliquote": "da costruire",
-        "profilo_retributivo": "RGS Conto annuale da integrare",
-        "note": "Non usa silenziosamente aliquote FPLD.",
+        "categoria_nome": "Dipendente pubblico - Stato (CTPS)",
+        "gestione": "Gestione dipendenti pubblici - CTPS",
+        "ccnl": "Amministrazioni statali",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "pubblico_ctps",
+        "aliquote": "33%: 8,80% lavoratore e 24,20% amministrazione",
+        "profilo_retributivo": "retribuzione imponibile inserita dall'utente",
+        "anno_minimo_calcolabile": 1996,
+        "note": "Profilo CTPS per dipendenti dello Stato. Il 33% e' applicato dal 1996 nel controfattuale contributivo; non include TFS/TFR, Fondo credito o altre contribuzioni non pensionistiche.",
+    },
+    {
+        "categoria_id": "pubblico_enti_locali",
+        "categoria_nome": "Dipendente pubblico - enti locali e sanita'",
+        "gestione": "Gestione dipendenti pubblici - CPDEL/CPS/CPI/CPUG",
+        "ccnl": "Enti locali, sanita' e casse assimilate",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "pubblico_enti_locali",
+        "aliquote": "32,65%: 8,85% lavoratore e 23,80% amministrazione",
+        "profilo_retributivo": "retribuzione imponibile inserita dall'utente",
+        "anno_minimo_calcolabile": 1996,
+        "note": "Profilo CPDEL/CPS/CPI/CPUG. Il 32,65% e' applicato dal 1996 nel controfattuale contributivo; non include TFS/TFR, Fondo credito o altre contribuzioni non pensionistiche.",
     },
     {
         "categoria_id": "artigiani",
@@ -307,12 +396,13 @@ CATEGORY_ROWS: list[dict[str, object]] = [
         "categoria_nome": "Commercianti",
         "gestione": "Gestione speciale commercianti",
         "ccnl": "",
-        "stato": "non_implementata",
-        "abilitata_frontend": False,
-        "profilo_aliquota_id": "commercianti_da_costruire",
-        "aliquote": "da costruire",
-        "profilo_retributivo": "reddito imponibile, minimali e massimali",
-        "note": "Richiede la serie completa comprensiva dell'aliquota aggiuntiva specifica della gestione commercianti.",
+        "stato": "operativa_con_limiti",
+        "abilitata_frontend": True,
+        "profilo_aliquota_id": "commercianti",
+        "aliquote": "IVS storica e contributo aggiuntivo per cessazione attivita'",
+        "profilo_retributivo": "reddito imponibile d'impresa inserito dall'utente",
+        "anno_minimo_calcolabile": 1990,
+        "note": "Il montante usa l'aliquota IVS; i contributi finanziari includono anche la componente per l'indennizzo di cessazione dell'attivita'. Non ricostruisce minimali, massimali, maggiorazioni, riduzioni o agevolazioni.",
     },
     {
         "categoria_id": "gestione_separata_professionisti",
@@ -367,8 +457,11 @@ DEFAULT_SCENARIO = {
     "percentuale_lavoro": 100.0,
     "mesi_lavorati_annui": 12.0,
     "pensione_lorda_mensile_effettiva": 2_000.0,
+    "pensione_mensile_attuale": 2_000.0,
+    "pensione_valore_tipo": "lordo",
+    "pensione_netto_mensile_stimato": None,
     "mensilita_pensione": 13.0,
-    "anno_riferimento_pensione": 2025,
+    "anno_riferimento_pensione": CURRENT_YEAR,
     "rivalutazione_futura_pensione": "nessuna",
     "tasso_inflazione_futura": 0.02,
     "fonte_retribuzione": "ral_finale_inserita",
@@ -390,6 +483,12 @@ class RateInfo:
 class CapitalizationInfo:
     anno: int
     tasso: float
+    pil_anno_finale: int
+    pil_finale_milioni: float
+    pil_anno_iniziale: int
+    pil_iniziale_milioni: float
+    edizione_pil: str
+    tasso_ufficiale_pubblicato: float | None
     fonte_id: str
     natura_dato: str
     note: str
@@ -426,6 +525,47 @@ def to_int(value: object, default: int | None = None) -> int | None:
     return int(number)
 
 
+def pension_net_annual_estimate(annual_gross: float, year: int = CURRENT_YEAR) -> float:
+    if annual_gross <= 0:
+        return 0.0
+    middle_rate = 0.33 if year >= 2026 else 0.35
+    if annual_gross <= 28_000:
+        gross_tax = annual_gross * 0.23
+    elif annual_gross <= 50_000:
+        gross_tax = 6_440 + (annual_gross - 28_000) * middle_rate
+    else:
+        gross_tax = 6_440 + 22_000 * middle_rate + (annual_gross - 50_000) * 0.43
+    if annual_gross <= 8_500:
+        detraction = 1_955.0
+    elif annual_gross <= 28_000:
+        detraction = 700 + 1_255 * (28_000 - annual_gross) / 19_500
+    elif annual_gross <= 50_000:
+        detraction = 700 * (50_000 - annual_gross) / 22_000
+    else:
+        detraction = 0.0
+    if 25_000 < annual_gross <= 29_000:
+        detraction += 50
+    national_tax = max(gross_tax - max(detraction, 0.0), 0.0)
+    local_additional_tax = annual_gross * 0.021
+    return max(annual_gross - national_tax - local_additional_tax, 0.0)
+
+
+def pension_gross_annual_from_net(annual_net: float, year: int = CURRENT_YEAR) -> float:
+    if annual_net <= 0:
+        return 0.0
+    low = annual_net
+    high = max(annual_net * 2.5, annual_net + 30_000)
+    while pension_net_annual_estimate(high, year) < annual_net:
+        high *= 1.5
+    for _ in range(80):
+        middle = (low + high) / 2
+        if pension_net_annual_estimate(middle, year) < annual_net:
+            low = middle
+        else:
+            high = middle
+    return (low + high) / 2
+
+
 def normalize_scenario(raw: dict[str, object]) -> dict[str, object]:
     scenario = dict(DEFAULT_SCENARIO)
     for key, value in raw.items():
@@ -450,10 +590,27 @@ def normalize_scenario(raw: dict[str, object]) -> dict[str, object]:
         "percentuale_lavoro",
         "mesi_lavorati_annui",
         "pensione_lorda_mensile_effettiva",
+        "pensione_mensile_attuale",
+        "pensione_netto_mensile_stimato",
         "mensilita_pensione",
         "tasso_inflazione_futura",
     ]:
         scenario[key] = to_float(scenario.get(key), to_float(DEFAULT_SCENARIO.get(key)))
+    pension_months = float(scenario.get("mensilita_pensione") or 13.0)
+    current_input = to_float(raw.get("pensione_mensile_attuale"))
+    if current_input is None:
+        current_input = to_float(raw.get("pensione_lorda_mensile_effettiva"), 2_000.0) or 0.0
+    pension_value_type = str(raw.get("pensione_valore_tipo") or scenario.get("pensione_valore_tipo") or "lordo").lower()
+    scenario["pensione_mensile_attuale"] = current_input
+    scenario["pensione_valore_tipo"] = pension_value_type if pension_value_type in {"lordo", "netto"} else "lordo"
+    if scenario["pensione_valore_tipo"] == "netto":
+        annual_gross = pension_gross_annual_from_net(current_input * pension_months, CURRENT_YEAR)
+        scenario["pensione_lorda_mensile_effettiva"] = annual_gross / pension_months
+        scenario["pensione_netto_mensile_stimato"] = current_input
+    else:
+        scenario["pensione_lorda_mensile_effettiva"] = current_input
+        scenario["pensione_netto_mensile_stimato"] = pension_net_annual_estimate(current_input * pension_months, CURRENT_YEAR) / pension_months
+    scenario["anno_riferimento_pensione"] = CURRENT_YEAR
     birth_date = parse_date(raw.get("data_nascita"))
     retirement_date = parse_date(raw.get("data_pensionamento"))
     if birth_date is None:
@@ -513,7 +670,16 @@ def category_parameters(category_id: str) -> dict[str, object]:
     category = next((row for row in CATEGORY_ROWS if row["categoria_id"] == category_id), None)
     if category is None:
         raise ValueError(f"Categoria sconosciuta: {category_id}")
-    if not bool(category.get("abilitata_frontend")) or category.get("profilo_aliquota_id") not in {"fpld", "artigiani"}:
+    supported_profiles = {
+        "fpld",
+        "artigiani",
+        "commercianti",
+        "pubblico_ctps",
+        "pubblico_enti_locali",
+        "agricoli_dipendenti",
+        "agricoli_autonomi",
+    }
+    if not bool(category.get("abilitata_frontend")) or category.get("profilo_aliquota_id") not in supported_profiles:
         raise ValueError(f"Categoria non ancora calcolabile con una serie storica propria: {category['categoria_nome']}")
     return category
 
@@ -600,29 +766,115 @@ def artisan_rate_for_year(year: int) -> RateInfo:
     return RateInfo(rate, rate, rate, 0.0, "inps_aliquote_artigiani", note)
 
 
+def merchant_rate_for_year(year: int) -> RateInfo:
+    artisan = artisan_rate_for_year(year)
+    additional = MERCHANT_ADDITIONAL_RATES.get(year, MERCHANT_ADDITIONAL_RATES[max(MERCHANT_ADDITIONAL_RATES)])
+    note = (
+        "L'aliquota di computo segue l'IVS della Gestione commercianti. L'aliquota di finanziamento include anche "
+        "la componente per l'indennizzo di cessazione dell'attivita', che non incrementa il montante. "
+        "Minimali, massimali, maggiorazioni oltre la prima fascia, riduzioni e agevolazioni non sono ricostruiti."
+    )
+    return RateInfo(
+        artisan.aliquota_finanziamento + additional,
+        artisan.aliquota_computo,
+        artisan.quota_lavoratore + additional,
+        0.0,
+        "inps_aliquote_commercianti",
+        note,
+    )
+
+
+def public_employee_rate(profile_id: str, year: int) -> RateInfo:
+    if year < 1996:
+        raise ValueError("Il profilo contributivo semplificato dei dipendenti pubblici e' disponibile dal 1996.")
+    profile = PUBLIC_PENSION_PROFILES[profile_id]
+    rate = float(profile["aliquota"])
+    return RateInfo(
+        rate,
+        rate,
+        float(profile["quota_lavoratore"]),
+        float(profile["quota_datore"]),
+        "inps_aliquote_dipendenti_pubblici",
+        "Aliquota pensionistica della cassa pubblica selezionata; TFS/TFR, Fondo credito e contribuzioni non pensionistiche sono esclusi.",
+    )
+
+
+def agricultural_employee_rate_for_year(year: int) -> RateInfo:
+    if year < min(AGRICULTURAL_EMPLOYEE_RATES):
+        raise ValueError("La serie semplificata degli operai agricoli dipendenti e' disponibile dal 1998.")
+    financing = AGRICULTURAL_EMPLOYEE_RATES.get(year, AGRICULTURAL_EMPLOYEE_RATES[max(AGRICULTURAL_EMPLOYEE_RATES)])
+    worker = 0.0884 if year >= 2007 else 0.0854
+    return RateInfo(
+        financing,
+        0.33,
+        worker,
+        financing - worker,
+        "inps_aliquote_agricoli_dipendenti",
+        "Aliquota FPLD agricola di finanziamento; il controfattuale contributivo accredita il 33%. Minimali giornalieri e agevolazioni non sono ricostruiti.",
+    )
+
+
+def agricultural_self_employed_rate_for_year(year: int) -> RateInfo:
+    if year < min(AGRICULTURAL_SELF_EMPLOYED_RATES):
+        raise ValueError("La serie omogenea CD/CM/IAP e' disponibile dal 2012.")
+    rate = AGRICULTURAL_SELF_EMPLOYED_RATES.get(year, AGRICULTURAL_SELF_EMPLOYED_RATES[max(AGRICULTURAL_SELF_EMPLOYED_RATES)])
+    return RateInfo(
+        rate,
+        rate,
+        rate,
+        0.0,
+        "inps_aliquote_agricoli_autonomi",
+        "Aliquota CD/CM/IAP applicata al reddito convenzionale contributivo inserito; fasce aziendali, giornate, addizionali fisse e agevolazioni non sono ricostruite.",
+    )
+
+
 def rate_for_category_year(category_id: str, year: int, periods: pd.DataFrame | None = None) -> RateInfo:
     category = category_parameters(category_id)
-    if category["profilo_aliquota_id"] == "artigiani":
+    profile_id = str(category["profilo_aliquota_id"])
+    if profile_id == "artigiani":
         return artisan_rate_for_year(year)
+    if profile_id == "commercianti":
+        return merchant_rate_for_year(year)
+    if profile_id in PUBLIC_PENSION_PROFILES:
+        return public_employee_rate(profile_id, year)
+    if profile_id == "agricoli_dipendenti":
+        return agricultural_employee_rate_for_year(year)
+    if profile_id == "agricoli_autonomi":
+        return agricultural_self_employed_rate_for_year(year)
     return weighted_fpld_rate_for_year(year, periods)
 
 
 def capitalization_for_year(year: int) -> CapitalizationInfo:
-    if year in CAPITALIZATION_RATES:
-        return CapitalizationInfo(
-            anno=year,
-            tasso=CAPITALIZATION_RATES[year],
-            fonte_id="istat_tasso_capitalizzazione_montanti",
-            natura_dato="osservato",
-            note="Tasso annuo di capitalizzazione comunicato da ISTAT per la rivalutazione dei montanti contributivi.",
+    available_year = year
+    nature = "calcolato_da_pil_nominale_istat"
+    if year not in CAPITALIZATION_RATES:
+        available_year = max(
+            [item for item in CAPITALIZATION_RATES if item <= year],
+            default=min(CAPITALIZATION_RATES),
         )
-    nearest = max([item for item in CAPITALIZATION_RATES if item <= year], default=min(CAPITALIZATION_RATES))
+        nature = "stimato_per_trascinamento"
+    row = _capitalization_table.loc[_capitalization_table["anno"] == available_year].iloc[0]
+    official = to_float(row.get("tasso_ufficiale_pubblicato"))
+    note = (
+        "Tasso calcolato dai livelli di PIL nominale ISTAT scaricati via SDMX: "
+        "(PIL t-1 / PIL t-6)^(1/5)-1. Le revisioni dei conti nazionali possono produrre "
+        "uno scarto rispetto al tasso storico pubblicato. L'accredito dell'anno non viene "
+        "rivalutato nello stesso anno."
+    )
+    if available_year != year:
+        note += f" Per l'anno {year}, non ancora disponibile, e' usato il {available_year}."
     return CapitalizationInfo(
-        anno=nearest,
-        tasso=CAPITALIZATION_RATES[nearest],
-        fonte_id="istat_tasso_capitalizzazione_montanti",
-        natura_dato="stimato_per_trascinamento",
-        note=f"Anno {year} fuori dalla tabella disponibile; usato il valore piu' vicino precedente ({nearest}).",
+        anno=available_year,
+        tasso=float(row["tasso_capitalizzazione"]),
+        pil_anno_finale=int(row["pil_anno_finale"]),
+        pil_finale_milioni=float(row["pil_finale_milioni"]),
+        pil_anno_iniziale=int(row["pil_anno_iniziale"]),
+        pil_iniziale_milioni=float(row["pil_iniziale_milioni"]),
+        edizione_pil=str(row["edizione_pil"]),
+        tasso_ufficiale_pubblicato=official,
+        fonte_id="istat_pil_nominale_sdmx",
+        natura_dato=nature,
+        note=note,
     )
 
 
@@ -1034,8 +1286,12 @@ def effective_annual_pension(scenario: dict[str, object]) -> tuple[float, str]:
     if reference_year > retirement_year:
         years = reference_year - retirement_year
         annual = annual / ((1 + 0.02) ** years)
-        return annual, "Pensione attuale riportata alla decorrenza con perequazione annua stimata al 2%."
-    return annual, "Pensione lorda annua alla decorrenza o nello stesso anno di pensionamento."
+        note = "Pensione lorda attuale riportata alla decorrenza con perequazione annua stimata al 2%."
+    else:
+        note = "Pensione lorda attuale nello stesso anno del pensionamento."
+    if str(scenario.get("pensione_valore_tipo")) == "netto":
+        note += " Il lordo attuale e' stimato dal netto con IRPEF, detrazione da pensione e addizionali locali medie."
+    return annual, note
 
 
 def classify_regime(career: pd.DataFrame) -> str:
@@ -1119,6 +1375,9 @@ def calculate_paid_pension_metrics(
                 "eta_coefficiente_usata": coefficient.eta_usata,
                 "pensione_contributiva_annua_equivalente": contributive_pension,
                 "pensione_effettiva_annua_lorda": actual_pension,
+                "pensione_valore_tipo_inserito": scenario.get("pensione_valore_tipo") or "lordo",
+                "pensione_mensile_attuale_inserita": scenario.get("pensione_mensile_attuale"),
+                "pensione_netto_mensile_stimato": scenario.get("pensione_netto_mensile_stimato"),
                 "anno_riferimento_confronto": reference_year,
                 "pensione_contributiva_annua_equivalente_anno_riferimento": contributive_pension_reference,
                 "pensione_effettiva_annua_lorda_anno_riferimento": actual_pension_reference,
@@ -1155,6 +1414,11 @@ def parameter_tables(mortality: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFram
     profiles = [
         ("fpld", "generica_fpld", "FPLD lavoratori dipendenti", start_year),
         ("artigiani", "artigiani", "Gestione speciale artigiani", min(ARTISAN_RATES)),
+        ("commercianti", "commercianti", "Gestione speciale commercianti", min(ARTISAN_RATES)),
+        ("pubblico_ctps", "pubblico_impiego", "Gestione dipendenti pubblici - CTPS", 1996),
+        ("pubblico_enti_locali", "pubblico_enti_locali", "Gestione dipendenti pubblici - CPDEL/CPS/CPI/CPUG", 1996),
+        ("agricoli_dipendenti", "agricoltura", "FPLD operai agricoli", min(AGRICULTURAL_EMPLOYEE_RATES)),
+        ("agricoli_autonomi", "agricoli_autonomi", "Gestione autonoma agricola CD/CM/IAP", min(AGRICULTURAL_SELF_EMPLOYED_RATES)),
     ]
     for profile_id, category_id, management, profile_start in profiles:
         for year in range(profile_start, end_year + 1):
@@ -1175,6 +1439,13 @@ def parameter_tables(mortality: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFram
                     "quota_lavoratore": rate.quota_lavoratore,
                     "quota_datore": rate.quota_datore,
                     "tasso_capitalizzazione": cap.tasso,
+                    "coefficiente_rivalutazione": 1 + cap.tasso,
+                    "pil_anno_finale": cap.pil_anno_finale,
+                    "pil_finale_milioni": cap.pil_finale_milioni,
+                    "pil_anno_iniziale": cap.pil_anno_iniziale,
+                    "pil_iniziale_milioni": cap.pil_iniziale_milioni,
+                    "edizione_pil": cap.edizione_pil,
+                    "tasso_ufficiale_pubblicato": cap.tasso_ufficiale_pubblicato,
                     "fonte_id": rate.fonte_id + "; " + cap.fonte_id,
                     "natura_dato": cap.natura_dato,
                     "note": rate.note + " " + cap.note,
